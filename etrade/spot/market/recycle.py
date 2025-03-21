@@ -37,9 +37,12 @@ class Recycle(ABC):
 
 class BasicRecycle(Recycle):
 
-    def __init__(self, seq_len: int = 96, aggregation_len: int = 4):
+    def __init__(self, seq_len: int = 96, aggregation_len: int = 4, bias_ratio: float = 0.5,
+                 penalty_coefficient: float = 1.05):
         self.seq_len = seq_len
         self.aggregation_len = aggregation_len
+        self.bias_ratio = bias_ratio
+        self.penalty_coefficient = penalty_coefficient
 
     def to_seq(self, data) -> numpy.ndarray:
         data = numpy.asarray(data)
@@ -53,10 +56,22 @@ class BasicRecycle(Recycle):
         return data
 
     def __call__(self, actually_quantity, submitted_quantity, trade_yield, *args, **kwargs):
+        eps = numpy.finfo(float).eps
         aq = self.to_seq(actually_quantity)
         sq = self.to_seq(submitted_quantity)
         ty = self.to_seq(trade_yield)
 
+        aq_grouped = aq.reshape(-1, self.aggregation_len)
+        sq_grouped = sq.reshape(-1, self.aggregation_len)
+        ty_grouped = numpy.sum(ty.reshape(-1, self.aggregation_len), axis=1)
+
+        group_deviation = numpy.sum(sq_grouped + eps, axis=1) / numpy.sum(aq_grouped + eps, axis=1)
+        recycle_index = numpy.where(
+            (group_deviation <= (1 - self.bias_ratio)) | (group_deviation >= (1 + self.bias_ratio))
+        )[0]
+        return numpy.sum(ty_grouped) - numpy.sum(ty_grouped[recycle_index] * self.penalty_coefficient)
+
 
 if __name__ == "__main__":
-    pass
+    br = BasicRecycle()
+    print(br(50, 1000, 100))

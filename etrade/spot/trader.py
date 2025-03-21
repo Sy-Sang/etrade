@@ -53,11 +53,6 @@ class Station:
 
         return sq * dayhead_price + rq * realtime_price
 
-    def recycle(self, method: Recycle, actually_quantity, submitted_quantity, dayhead_price, realtime_price, *args,
-                **kwargs):
-        """超额利润回收"""
-        return method(actually_quantity, submitted_quantity, dayhead_price, realtime_price, *args, **kwargs)
-
 
 if __name__ == "__main__":
     s = Station("s", 50)
