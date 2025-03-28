@@ -45,15 +45,10 @@ class BasicRecycle(Recycle):
         self.penalty_coefficient = penalty_coefficient
 
     def to_seq(self, data) -> numpy.ndarray:
-        data = numpy.asarray(data)
-        if data.ndim == 0:
-            data = numpy.pad(numpy.array([data]), (0, self.seq_len - 1))
-        else:
-            if len(data) > self.seq_len:
-                data = data[:self.seq_len]
-            else:
-                data = numpy.pad(data, (0, self.seq_len - len(data)))
-        return data
+        """修整向量长度"""
+        data = numpy.atleast_1d(numpy.asarray(data))
+        data = data[:self.seq_len]
+        return numpy.pad(data, (0, self.seq_len - data.size))
 
     def __call__(self, actually_quantity, submitted_quantity, trade_yield, *args, **kwargs):
         eps = numpy.finfo(float).eps
@@ -74,4 +69,4 @@ class BasicRecycle(Recycle):
 
 if __name__ == "__main__":
     br = BasicRecycle()
-    print(br(50, 1000, 100))
+    print(br([50, 100], 1000, [100, 200]))

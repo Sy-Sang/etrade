@@ -40,18 +40,18 @@ class Station:
         self.name = name
         self.max_power = max_power
 
-    def trade(self, actually_quantity, submitted_quantity, dayhead_price, realtime_price) -> numpy.ndarray:
+    def trade(self, actually_quantity, submitted_quantity, dayahead_price, realtime_price) -> numpy.ndarray:
         """计算电力市场交易收益（支持批量计算）"""
         actually_quantity = numpy.asarray(actually_quantity)
         submitted_quantity = numpy.asarray(submitted_quantity)
-        dayhead_price = numpy.asarray(dayhead_price)
+        dayahead_price = numpy.asarray(dayahead_price)
         realtime_price = numpy.asarray(realtime_price)
 
         aq = numpy.clip(actually_quantity, 0, self.max_power)
         sq = numpy.clip(submitted_quantity, 0, self.max_power)
         rq = aq - sq
 
-        return sq * dayhead_price + rq * realtime_price
+        return sq * dayahead_price + rq * realtime_price
 
 
 if __name__ == "__main__":
