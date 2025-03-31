@@ -22,6 +22,9 @@ from collections import namedtuple
 from data_utils.stochastic_utils.vdistributions.abstract import AbstractDistribution
 from data_utils.stochastic_utils.vdistributions.tools.convert import generate_correlated_sample_matrix
 
+from etrade.spot.trader import Station
+from etrade.spot.market.recycle import Recycle
+
 # 外部模块
 import numpy
 
@@ -81,6 +84,22 @@ class DistributiveMarket:
             self.dayahead_price.correlated_rvf(num, pearson[1], samples[1]),
             self.realtime_price.correlated_rvf(num, pearson[2], samples[2])
         )
+
+    @classmethod
+    def trade(cls, station:Station, aq, dp, rp, x):
+        """交易"""
+        x = numpy.asarray(x)
+        x = numpy.expand_dims(x, axis=1)
+        x = numpy.broadcast_to(x, aq.shape)
+        return numpy.sum(station.trade(aq,x,dp,rp), axis=0)
+
+    @classmethod
+    def trade_with_recycle(cls, station:Station, recycle:Recycle, aq, dp, rp, x):
+        """考虑回收机制的交易"""
+        x = numpy.asarray(x)
+        x = numpy.expand_dims(x, axis=1)
+        x = numpy.broadcast_to(x, aq.shape)
+        return recycle(aq, x, numpy.sum(station.trade(aq,x,dp,rp), axis=0))
 
 
 if __name__ == "__main__":
