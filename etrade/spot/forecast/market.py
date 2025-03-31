@@ -59,6 +59,7 @@ class DistributiveMarket:
         self.power_generation = copy.deepcopy(power_generation)
         self.dayahead_price = copy.deepcopy(dayahead_price)
         self.realtime_price = copy.deepcopy(realtime_price)
+        self.shape = (3, self.power_generation.len)
 
     def rvf(self, num: int):
         """随机样本"""
@@ -74,6 +75,7 @@ class DistributiveMarket:
             [None] * self.power_generation.len,
             [None] * self.power_generation.len,
         ] if samples is None else samples
+
         return (
             self.power_generation.correlated_rvf(num, pearson[0], samples[0]),
             self.dayahead_price.correlated_rvf(num, pearson[1], samples[1]),
