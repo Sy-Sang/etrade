@@ -36,9 +36,11 @@ class Station:
     发电厂
     """
 
-    def __init__(self, name: str, max_power: float):
+    def __init__(self, name: str, max_power: float, min_price=0, max_price=numpy.inf):
         self.name = name
         self.max_power = max_power
+        self.min_price = min_price
+        self.max_price = max_price
 
     def trade(self, actually_quantity, submitted_quantity, dayahead_price, realtime_price) -> numpy.ndarray:
         """计算电力市场交易收益（支持批量计算）"""
@@ -49,9 +51,11 @@ class Station:
 
         aq = numpy.clip(actually_quantity, 0, self.max_power)
         sq = numpy.clip(submitted_quantity, 0, self.max_power)
+        dp = numpy.clip(dayahead_price, self.min_price, self.max_price)
+        rp = numpy.clip(realtime_price, self.min_price, self.max_price)
         rq = aq - sq
 
-        return sq * dayahead_price + rq * realtime_price
+        return sq * dp + rq * rp
 
 
 if __name__ == "__main__":
