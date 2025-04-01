@@ -86,20 +86,20 @@ class DistributiveMarket:
         )
 
     @classmethod
-    def trade(cls, station:Station, aq, dp, rp, x):
+    def trade(cls, station: Station, aq, dp, rp, x):
         """交易"""
         x = numpy.asarray(x)
         x = numpy.expand_dims(x, axis=1)
         x = numpy.broadcast_to(x, aq.shape)
-        return numpy.sum(station.trade(aq,x,dp,rp), axis=0)
+        return numpy.sum(station.trade(aq, x, dp, rp), axis=0)
 
     @classmethod
-    def trade_with_recycle(cls, station:Station, recycle:Recycle, aq, dp, rp, x):
+    def trade_with_recycle(cls, station: Station, recycle: Recycle, aq, dp, rp, x):
         """考虑回收机制的交易"""
-        x = numpy.asarray(x)
-        x = numpy.expand_dims(x, axis=1)
-        x = numpy.broadcast_to(x, aq.shape)
-        return recycle(aq, x, numpy.sum(station.trade(aq,x,dp,rp), axis=0))
+        # x = numpy.asarray(x)
+        # x = numpy.expand_dims(x, axis=1)
+        # x = numpy.broadcast_to(x, aq.shape)
+        return recycle(aq, x, station.trade(aq, x, dp, rp))
 
 
 if __name__ == "__main__":

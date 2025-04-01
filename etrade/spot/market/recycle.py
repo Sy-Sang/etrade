@@ -58,4 +58,4 @@ class BasicRecycle(Recycle):
 
 if __name__ == "__main__":
     br = BasicRecycle()
-    print(br([50, 100], 1000, [100, 200]))
+    print(br(50, 40, 100))
