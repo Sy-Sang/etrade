@@ -96,10 +96,7 @@ class DistributiveMarket:
     @classmethod
     def trade_with_recycle(cls, station: Station, recycle: Recycle, aq, dp, rp, x):
         """考虑回收机制的交易"""
-        # x = numpy.asarray(x)
-        # x = numpy.expand_dims(x, axis=1)
-        # x = numpy.broadcast_to(x, aq.shape)
-        return recycle(aq, x, station.trade(aq, x, dp, rp))
+        return recycle(aq, x, cls.trade(station, aq, dp, rp, x))
 
 
 if __name__ == "__main__":
