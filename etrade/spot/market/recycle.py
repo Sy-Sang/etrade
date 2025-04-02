@@ -56,6 +56,34 @@ class BasicRecycle(Recycle):
         return adjusted_yield
 
 
+class PointwiseRecycle(BasicRecycle):
+    """逐点的回收机制"""
+
+    def penalty_q(self, aq_table, sq):
+        """判断是否惩罚"""
+        aq_table = numpy.atleast_2d(aq_table)
+        sq = numpy.expand_dims(sq, axis=1)
+        sq = numpy.broadcast_to(sq, aq_table.shape)
+        condition = (aq_table > (1 + self.bias_ratio) * sq) | (aq_table < self.bias_ratio * sq)
+        # return numpy.any(condition, axis=0)
+        return condition
+
+    def __call__(self, actually_quantity_table, submitted_quantity, trade_yield_table, *args, **kwargs):
+        trade_yield_table = numpy.atleast_2d(trade_yield_table)
+
+        penalty_mask = self.penalty_q(actually_quantity_table, submitted_quantity)
+        # penalty = numpy.sum(trade_yield_table, axis=0) * self.penalty_coefficient
+        # adjusted_yield = numpy.sum(trade_yield_table, axis=0) - penalty * penalty_mask.astype(float)
+        # return adjusted_yield
+        penalty = trade_yield_table * self.penalty_coefficient
+        adjusted_yield = numpy.sum(trade_yield_table, axis=0) - numpy.sum(penalty * penalty_mask.astype(float), axis=0)
+        return adjusted_yield
+
+
 if __name__ == "__main__":
     br = BasicRecycle()
     print(br(50, 40, 100))
+
+    pr = PointwiseRecycle()
+
+    print(pr.penalty_q(numpy.arange(16).reshape(-1, 2), numpy.arange(0, 16, 2)))

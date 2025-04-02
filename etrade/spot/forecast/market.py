@@ -27,6 +27,7 @@ from etrade.spot.market.recycle import Recycle
 
 # 外部模块
 import numpy
+from scipy.optimize import differential_evolution
 
 
 # 代码块
@@ -97,6 +98,21 @@ class DistributiveMarket:
     def trade_with_recycle(cls, station: Station, recycle: Recycle, aq, dp, rp, x):
         """考虑回收机制的交易"""
         return recycle(aq, x, cls.trade(station, aq, dp, rp, x))
+
+    @classmethod
+    def submitted_quantity_optimizer(cls, station: Station, recycle: Recycle, aq, dp, rp, q_min=0, q_max=None):
+        """sq优化器"""
+        q_max = station.max_power if q_max is None else q_max
+
+        def f(x):
+            return numpy.mean(
+                cls.trade_with_recycle(station, recycle, aq, dp, rp, x)
+            ) * -1
+
+        result = differential_evolution(f, [(q_min, q_max)] * 4, strategy='best1bin',
+                                        mutation=(0.5, 1), recombination=0.7,
+                                        popsize=15, maxiter=1000, tol=1e-6)
+        return result
 
 
 if __name__ == "__main__":
