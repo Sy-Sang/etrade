@@ -21,6 +21,7 @@ from collections import namedtuple
 # 项目模块
 from data_utils.stochastic_utils.vdistributions.abstract import AbstractDistribution
 from data_utils.stochastic_utils.vdistributions.tools.convert import generate_correlated_sample_matrix
+from data_utils.stochastic_utils.vdistributions.tools.divergence import kl_divergence_continuous, crps
 
 from etrade.spot.trader import Station
 from etrade.spot.market.recycle import Recycle
@@ -113,6 +114,36 @@ class DistributiveMarket:
                                         mutation=(0.5, 1), recombination=0.7,
                                         popsize=15, maxiter=1000, tol=1e-6)
         return result
+
+    def crps(self, aq, dp, rp):
+        """crps"""
+        aq = numpy.asarray(aq).reshape(-1)
+        dp = numpy.asarray(dp).reshape(-1)
+        rp = numpy.asarray(rp).reshape(-1)
+        l = [[], [], []]
+        for i in range(self.power_generation.len):
+            l[0].append(
+                crps(self.power_generation.distributions[i], aq[i])
+            )
+            l[1].append(
+                crps(self.dayahead_price.distributions[i], dp[i])
+            )
+            l[2].append(
+                crps(self.realtime_price.distributions[i], rp[i])
+            )
+        return numpy.asarray(l)
+
+    def price_kl_divergence(self):
+        """价格的kl散度"""
+        l = []
+        for i in range(self.power_generation.len):
+            l.append(
+                kl_divergence_continuous(
+                    self.dayahead_price.distributions[i],
+                    self.realtime_price.distributions[i]
+                )
+            )
+        return numpy.asarray(l)
 
 
 if __name__ == "__main__":
