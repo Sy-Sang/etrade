@@ -29,6 +29,7 @@ from etrade.spot.market.recycle import Recycle
 # 外部模块
 import numpy
 from scipy.optimize import differential_evolution
+from matplotlib import pyplot
 
 
 # 代码块
@@ -65,6 +66,31 @@ class DistributiveMarket:
         self.dayahead_price = copy.deepcopy(dayahead_price)
         self.realtime_price = copy.deepcopy(realtime_price)
         self.shape = (3, self.power_generation.len)
+        self.map = {
+            0: self.power_generation,
+            1: self.dayahead_price,
+            2: self.realtime_price
+        }
+
+    def __repr__(self):
+        # return str({
+        #     "power_generation": self.power_generation.distributions,
+        #     "dayahead_price": self.dayahead_price.distributions,
+        #     "realtime_price": self.realtime_price.distributions
+        # })
+        return (f"power_generation:{self.power_generation.distributions}\r\n"
+                f"dayahead_price:{self.dayahead_price.distributions}\r\n"
+                f"realtime_price:{self.realtime_price.distributions}")
+
+    def plot(self, curve_index=1):
+        counter = 1
+        for i in range(3):
+            for j in range(self.power_generation.len):
+                pyplot.subplot(3, self.power_generation.len, counter)
+                curve = self.map[i].distributions[j].curves()[curve_index]
+                pyplot.plot(curve[:, 0], curve[:, 1])
+                counter += 1
+        pyplot.show()
 
     def rvf(self, num: int):
         """随机样本"""
