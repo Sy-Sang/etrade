@@ -77,11 +77,13 @@ if __name__ == "__main__":
     aq = DistributionConstructor(NormalDistribution, [(30, 50), (5, 10)])
     dp = DistributionConstructor(LogNormalDistribution, [(0, 1), (0.1, 0.2)])
     rp = DistributionConstructor(LogNormalDistribution, [(0, 1), (0.1, 0.2)])
-    # # print(aq.foldlist(4).distributions)
-    # s = Station("s", 50)
-    # br = PointwiseRecycle(0.5, 1.05)
+
     mc = MarketConstructor(aq, dp, rp)
-    # mk = mc.foldlist(4)
-    # print(mk)
-    # print(mk.price_kl_divergence())
-    print(mc.random(4).price_kl_divergence())
+
+    rm = mc.random(4)
+    pm = mc.random(4)
+
+    rs = rm.random_sample()
+    print(rs)
+
+    print(pm.crps(rs[0], rs[1], rs[2]))

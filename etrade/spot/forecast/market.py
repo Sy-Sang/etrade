@@ -73,16 +73,14 @@ class DistributiveMarket:
         }
 
     def __repr__(self):
-        # return str({
-        #     "power_generation": self.power_generation.distributions,
-        #     "dayahead_price": self.dayahead_price.distributions,
-        #     "realtime_price": self.realtime_price.distributions
-        # })
-        return (f"power_generation:{self.power_generation.distributions}\r\n"
-                f"dayahead_price:{self.dayahead_price.distributions}\r\n"
-                f"realtime_price:{self.realtime_price.distributions}")
+        return str({
+            "power_generation": self.power_generation.distributions,
+            "dayahead_price": self.dayahead_price.distributions,
+            "realtime_price": self.realtime_price.distributions
+        })
 
     def plot(self, curve_index=1):
+        """显示pyplot"""
         counter = 1
         for i in range(3):
             for j in range(self.power_generation.len):
@@ -95,6 +93,13 @@ class DistributiveMarket:
     def rvf(self, num: int):
         """随机样本"""
         return self.power_generation.rvf(num), self.dayahead_price.rvf(num), self.realtime_price.rvf(num)
+
+    def random_sample(self):
+        aq, dp, rp = self.rvf(1)
+        aq = aq.reshape(self.shape[1])
+        dp = dp.reshape(self.shape[1])
+        rp = rp.reshape(self.shape[1])
+        return numpy.stack([aq, dp, rp], axis=0)
 
     def mean(self, num: int):
         return self.power_generation.mean(num), self.dayahead_price.mean(num), self.realtime_price.mean(num)
