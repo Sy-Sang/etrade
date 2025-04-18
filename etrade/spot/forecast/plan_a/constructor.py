@@ -28,6 +28,7 @@ from data_utils.stochastic_utils.vdistributions.parameter.continuous.basic impor
     SkewNormalDistribution, LogNormalDistribution
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.kernel.gaussian import \
     GaussianKernelMixDistribution
+from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.kernel2 import KernelMixDistribution
 from data_utils.stochastic_utils.vdistributions.tools.clip import ClampedDistribution
 
 from etrade.spot.trader import Station
@@ -112,6 +113,26 @@ class MarketConstructor:
         dp = DistributiveSeries(*[ClampedDistribution(i, *dp_range) for i in self.dp_constructor.random(num)])
         rp = DistributiveSeries(*[ClampedDistribution(i, *rp_range) for i in self.rp_constructor.random(num)])
         return DistributiveMarket(aq, dp, rp)
+
+
+def market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMarket, num_a, num_b, aq_range, dp_range,
+                         rp_range):
+    aq_a, dp_a, rp_a = market_a.rvf(num_a)
+    aq_b, dp_b, rp_b = market_b.rvf(num_b)
+    aq = numpy.column_stack((aq_a, aq_b))
+    dp = numpy.column_stack((dp_a, dp_b))
+    rp = numpy.column_stack((rp_a, rp_b))
+    aq_list = []
+    dp_list = []
+    rp_list = []
+    for i in range(len(aq)):
+        aq_list.append(KernelMixDistribution(aq[i]))
+        dp_list.append(KernelMixDistribution(dp[i]))
+        rp_list.append(KernelMixDistribution(rp[i]))
+    aq_series = DistributiveSeries(*[ClampedDistribution(i, *aq_range) for i in aq_list])
+    dp_series = DistributiveSeries(*[ClampedDistribution(i, *dp_range) for i in dp_list])
+    rp_series = DistributiveSeries(*[ClampedDistribution(i, *rp_range) for i in rp_list])
+    return DistributiveMarket(aq_series, dp_series, rp_series)
 
 
 if __name__ == "__main__":
