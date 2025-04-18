@@ -88,18 +88,6 @@ class OrdinaryGaussianKernelDistributionConstructor(AbstractDistributionConstruc
         return dist_list
 
 
-# class ClampedDistributionConstructor(AbstractDistributionConstructor):
-#     """对distributions进行剪裁"""
-#
-#     def __init__(self, distributions, min, max):
-#         self.distributions = distributions
-#         self.min = min
-#         self.max = max
-#
-#     def random(self, num: int):
-#         return [ClampedDistribution(i, self.min, self.max) for i in self.distributions]
-
-
 class MarketConstructor:
     """市场构造器"""
 

@@ -94,6 +94,10 @@ class DistributiveMarket:
         """随机样本"""
         return self.power_generation.rvf(num), self.dayahead_price.rvf(num), self.realtime_price.rvf(num)
 
+    def observe(self):
+        """观测数据"""
+        return numpy.asarray(self.rvf(1)).reshape(3, -1)
+
     def random_sample(self):
         aq, dp, rp = self.rvf(1)
         aq = aq.reshape(self.shape[1])
@@ -131,7 +135,11 @@ class DistributiveMarket:
         """考虑回收机制的交易"""
         return recycle(aq, x, cls.trade(station, aq, dp, rp, x))
 
-    def quantity_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
+    def market_trade(self, station: Station, recycle: Recycle, x, num=1000):
+        aq, dp, rp = self.rvf(num)
+        return self.trade_with_recycle(station, recycle, aq, dp, rp, x)
+
+    def power_generation_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
         q_max = station.max_power if q_max is None else q_max
         power_generation, dayahead_price, realtime_price = self.rvf(num)
 
@@ -146,9 +154,11 @@ class DistributiveMarket:
                                         popsize=15, maxiter=1000, tol=1e-6)
         return result
 
-    def faster_quantity_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
+    def faster_power_generation_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
+        q_min = 0 if q_min is None else q_min
         q_max = station.max_power if q_max is None else q_max
         power_generation, dayahead_price, realtime_price = self.rvf(num)
+        mean = self.mean(num)
 
         def f(x):
             return numpy.mean(
@@ -156,7 +166,7 @@ class DistributiveMarket:
                                         realtime_price, x)
             ) * -1
 
-        result = minimize(f, power_generation[:, 0], bounds=[(q_min, q_max)] * 4)
+        result = minimize(f, mean[0], bounds=[(q_min, q_max)] * 4)
         return result
 
     @classmethod
