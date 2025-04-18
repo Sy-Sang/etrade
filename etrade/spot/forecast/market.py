@@ -28,7 +28,7 @@ from etrade.spot.market.recycle import Recycle
 
 # 外部模块
 import numpy
-from scipy.optimize import differential_evolution
+from scipy.optimize import differential_evolution, minimize
 from matplotlib import pyplot
 
 
@@ -130,6 +130,34 @@ class DistributiveMarket:
     def trade_with_recycle(cls, station: Station, recycle: Recycle, aq, dp, rp, x):
         """考虑回收机制的交易"""
         return recycle(aq, x, cls.trade(station, aq, dp, rp, x))
+
+    def quantity_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
+        q_max = station.max_power if q_max is None else q_max
+        power_generation, dayahead_price, realtime_price = self.rvf(num)
+
+        def f(x):
+            return numpy.mean(
+                self.trade_with_recycle(station, recycle, power_generation, dayahead_price,
+                                        realtime_price, x)
+            ) * -1
+
+        result = differential_evolution(f, [(q_min, q_max)] * 4, strategy='best1bin',
+                                        mutation=(0.5, 1), recombination=0.7,
+                                        popsize=15, maxiter=1000, tol=1e-6)
+        return result
+
+    def faster_quantity_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
+        q_max = station.max_power if q_max is None else q_max
+        power_generation, dayahead_price, realtime_price = self.rvf(num)
+
+        def f(x):
+            return numpy.mean(
+                self.trade_with_recycle(station, recycle, power_generation, dayahead_price,
+                                        realtime_price, x)
+            ) * -1
+
+        result = minimize(f, power_generation[:, 0], bounds=[(q_min, q_max)] * 4)
+        return result
 
     @classmethod
     def submitted_quantity_optimizer(cls, station: Station, recycle: Recycle, aq, dp, rp, q_min=0, q_max=None):
