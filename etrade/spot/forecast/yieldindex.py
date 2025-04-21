@@ -36,10 +36,10 @@ def difference_quantile(x, y):
 
 
 def zero_quantile(x, y):
-    # x = numpy.asarray(x)
-    # y = numpy.asarray(y)
-    # d = numpy.sort(x - y)
-    d = difference_quantile(x, y)
+    x = numpy.asarray(x)
+    y = numpy.asarray(y)
+    d = numpy.sort(x - y)
+    # d = difference_quantile(x, y)
     return numpy.searchsorted(d, 0) / len(d)
 
 

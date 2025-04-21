@@ -21,7 +21,7 @@ from collections import namedtuple
 # 项目模块
 from data_utils.stochastic_utils.vdistributions.abstract import AbstractDistribution
 from data_utils.stochastic_utils.vdistributions.tools.convert import generate_correlated_sample_matrix
-from data_utils.stochastic_utils.vdistributions.tools.divergence import kl_divergence_continuous, crps
+from data_utils.stochastic_utils.vdistributions.tools.divergence import kl_divergence_continuous, crps, quantile_RMSE
 
 from etrade.spot.trader import Station
 from etrade.spot.market.recycle import Recycle
@@ -149,9 +149,18 @@ class DistributiveMarket:
                                         realtime_price, x)
             ) * -1
 
-        result = differential_evolution(f, [(q_min, q_max)] * 4, strategy='best1bin',
-                                        mutation=(0.5, 1), recombination=0.7,
-                                        popsize=15, maxiter=1000, tol=1e-6)
+        result = differential_evolution(
+            f,
+            [(q_min, q_max)] * 4,
+            strategy='best1bin',  # 变异策略
+            popsize=10,  # 种群大小（默认15，越小越快但精度低）
+            mutation=(0.5, 1.0),  # 变异范围
+            recombination=0.9,  # 交叉概率
+            tol=1e-5,
+            polish=True,  # 自动调用L-BFGS-B精修
+            # workers=-1,  # 多核并行
+            # updating='deferred',  # 提升并行效率
+        )
         return result
 
     def faster_power_generation_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
@@ -213,6 +222,19 @@ class DistributiveMarket:
                 )
             )
         return numpy.asarray(l)
+
+    def quantile_rmse_matrix(self):
+        """kl散度矩阵"""
+        m = []
+        for r in range(3):
+            row = []
+            for c in range(self.power_generation.len):
+                row.append(
+                    [quantile_RMSE(self.map[r].distributions[c], self.map[r].distributions[i]) for i in
+                     range(self.power_generation.len)]
+                )
+            m.append(row)
+        return m
 
 
 if __name__ == "__main__":

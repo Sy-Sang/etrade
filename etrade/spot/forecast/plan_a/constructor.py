@@ -67,6 +67,7 @@ class DistributionConstructor(AbstractDistributionConstructor):
 
 
 class OrdinaryGaussianKernelDistributionConstructor(AbstractDistributionConstructor):
+    """平凡的高斯核分布构造器"""
 
     def __init__(self, mean_range=(0, 1), std_range=(1, 2), kernel_num_range=(1, 4)):
         self.mean_range = mean_range
