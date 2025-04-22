@@ -19,6 +19,7 @@ from typing import Union, Self, Tuple
 from collections import namedtuple
 
 # 项目模块
+from easy_utils.number_utils.calculus_utils import n_integrate
 from data_utils.stochastic_utils.vdistributions.abstract import AbstractDistribution
 from data_utils.stochastic_utils.vdistributions.tools.convert import generate_correlated_sample_matrix
 from data_utils.stochastic_utils.vdistributions.tools.divergence import kl_divergence_continuous, crps, quantile_RMSE
@@ -90,16 +91,20 @@ class DistributiveMarket:
                 counter += 1
         pyplot.show()
 
-    def rvf(self, num: int):
+    def rvf(self, num: int, aq_range=(-numpy.inf, numpy.inf), dp_range=(-numpy.inf, numpy.inf),
+            rp_range=(-numpy.inf, numpy.inf)):
         """随机样本"""
-        return self.power_generation.rvf(num), self.dayahead_price.rvf(num), self.realtime_price.rvf(num)
+        return (numpy.clip(self.power_generation.rvf(num), *aq_range),
+                numpy.clip(self.dayahead_price.rvf(num), *dp_range),
+                numpy.clip(self.realtime_price.rvf(num), *rp_range))
 
     def observe(self):
         """观测数据"""
         return numpy.asarray(self.rvf(1)).reshape(3, -1)
 
-    def random_sample(self):
-        aq, dp, rp = self.rvf(1)
+    def random_sample(self, aq_range=(-numpy.inf, numpy.inf), dp_range=(-numpy.inf, numpy.inf),
+                      rp_range=(-numpy.inf, numpy.inf)):
+        aq, dp, rp = self.rvf(1, aq_range, dp_range, rp_range)
         aq = aq.reshape(self.shape[1])
         dp = dp.reshape(self.shape[1])
         rp = rp.reshape(self.shape[1])
@@ -153,9 +158,9 @@ class DistributiveMarket:
             f,
             [(q_min, q_max)] * 4,
             strategy='best1bin',  # 变异策略
-            popsize=10,  # 种群大小（默认15，越小越快但精度低）
-            mutation=(0.5, 1.0),  # 变异范围
-            recombination=0.9,  # 交叉概率
+            # popsize=10,  # 种群大小（默认15，越小越快但精度低）
+            # mutation=(0.5, 1.0),  # 变异范围
+            # recombination=0.9,  # 交叉概率
             tol=1e-5,
             polish=True,  # 自动调用L-BFGS-B精修
             # workers=-1,  # 多核并行
@@ -208,6 +213,29 @@ class DistributiveMarket:
             )
             l[2].append(
                 crps(self.realtime_price.distributions[i], rp[i])
+            )
+        return numpy.asarray(l)
+
+    def faster_crps(self, aq, dp, rp):
+        def private_crps(dist: AbstractDistribution, value, num_points=100):
+            domain_min, domain_max = dist.domain()
+            x = numpy.linspace(domain_min, domain_max, num_points)
+            fx = (dist.cdf(x) - numpy.where(x >= value, 1, 0)) ** 2
+            return numpy.trapz(fx, x)
+
+        aq = numpy.asarray(aq).reshape(-1)
+        dp = numpy.asarray(dp).reshape(-1)
+        rp = numpy.asarray(rp).reshape(-1)
+        l = [[], [], []]
+        for i in range(self.power_generation.len):
+            l[0].append(
+                private_crps(self.power_generation.distributions[i], aq[i])
+            )
+            l[1].append(
+                private_crps(self.dayahead_price.distributions[i], dp[i])
+            )
+            l[2].append(
+                private_crps(self.realtime_price.distributions[i], rp[i])
             )
         return numpy.asarray(l)
 
