@@ -29,6 +29,7 @@ from data_utils.stochastic_utils.vdistributions.parameter.continuous.basic impor
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.kernel.gaussian import \
     GaussianKernelMixDistribution
 from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.kernel2 import KernelMixDistribution
+from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.histogram import HistogramDistribution
 from data_utils.stochastic_utils.vdistributions.tools.clip import ClampedDistribution
 
 from etrade.spot.trader import Station
@@ -77,12 +78,12 @@ class OrdinaryGaussianKernelDistributionConstructor(AbstractDistributionConstruc
     def random(self, num: int):
         dist_list = []
         for _ in range(num):
-            kernel_num = numpy.random.randint(self.kernel_num_range[0], self.kernel_num_range[1])
+            kernel_num = numpy.random.randint(*self.kernel_num_range)
             kernel_arg = []
             for k in range(kernel_num):
                 kernel_arg.append([
-                    numpy.random.uniform(self.mean_range[0], self.mean_range[1]),
-                    numpy.random.uniform(self.std_range[0], self.std_range[1])
+                    numpy.random.uniform(*self.mean_range),
+                    numpy.random.uniform(*self.std_range)
                 ])
             dist_list.append(
                 GaussianKernelMixDistribution(*kernel_arg)
@@ -109,14 +110,21 @@ class MarketConstructor:
         rp = DistributiveSeries(*self.rp_constructor.random(num))
         return DistributiveMarket(aq, dp, rp)
 
-    def clamped_random(self, num, aq_range, dp_range, rp_range):
-        aq = DistributiveSeries(*[ClampedDistribution(i, *aq_range) for i in self.aq_constructor.random(num)])
-        dp = DistributiveSeries(*[ClampedDistribution(i, *dp_range) for i in self.dp_constructor.random(num)])
-        rp = DistributiveSeries(*[ClampedDistribution(i, *rp_range) for i in self.rp_constructor.random(num)])
-        return DistributiveMarket(aq, dp, rp)
+    # def clamped_random(self, num, aq_range, dp_range, rp_range):
+    #     aq = DistributiveSeries(*[ClampedDistribution(i, *aq_range) for i in self.aq_constructor.random(num)])
+    #     dp = DistributiveSeries(*[ClampedDistribution(i, *dp_range) for i in self.dp_constructor.random(num)])
+    #     rp = DistributiveSeries(*[ClampedDistribution(i, *rp_range) for i in self.rp_constructor.random(num)])
+    #     return DistributiveMarket(aq, dp, rp)
 
 
 def market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMarket, num_a, num_b):
+    def kernel_or_his(data):
+        try:
+            return KernelMixDistribution(data)
+        except Exception as e:
+            print(f"[Fallback] KernelMix failed: {e} — switching to HistogramDistribution")
+            return HistogramDistribution(data)
+
     aq_a, dp_a, rp_a = market_a.rvf(num_a)
     aq_b, dp_b, rp_b = market_b.rvf(num_b)
     aq = numpy.column_stack((aq_a, aq_b))
@@ -126,58 +134,44 @@ def market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMar
     dp_list = []
     rp_list = []
     for i in range(len(aq)):
-        aq_list.append(KernelMixDistribution(aq[i]))
-        dp_list.append(KernelMixDistribution(dp[i]))
-        rp_list.append(KernelMixDistribution(rp[i]))
+        aq_list.append(kernel_or_his(aq[i]))
+        dp_list.append(kernel_or_his(dp[i]))
+        rp_list.append(kernel_or_his(rp[i]))
     aq_series = DistributiveSeries(*aq_list)
     dp_series = DistributiveSeries(*dp_list)
     rp_series = DistributiveSeries(*rp_list)
     return DistributiveMarket(aq_series, dp_series, rp_series)
 
 
-def clamped_market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMarket, num_a, num_b, aq_range,
-                                 dp_range,
-                                 rp_range):
-    aq_a, dp_a, rp_a = market_a.rvf(num_a)
-    aq_b, dp_b, rp_b = market_b.rvf(num_b)
-    aq = numpy.column_stack((aq_a, aq_b))
-    dp = numpy.column_stack((dp_a, dp_b))
-    rp = numpy.column_stack((rp_a, rp_b))
-    aq_list = []
-    dp_list = []
-    rp_list = []
-    for i in range(len(aq)):
-        aq_list.append(KernelMixDistribution(aq[i]))
-        dp_list.append(KernelMixDistribution(dp[i]))
-        rp_list.append(KernelMixDistribution(rp[i]))
-    aq_series = DistributiveSeries(*[ClampedDistribution(i, *aq_range) for i in aq_list])
-    dp_series = DistributiveSeries(*[ClampedDistribution(i, *dp_range) for i in dp_list])
-    rp_series = DistributiveSeries(*[ClampedDistribution(i, *rp_range) for i in rp_list])
-    return DistributiveMarket(aq_series, dp_series, rp_series)
+# def clamped_market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMarket, num_a, num_b, aq_range,
+#                                  dp_range,
+#                                  rp_range):
+#     aq_a, dp_a, rp_a = market_a.rvf(num_a)
+#     aq_b, dp_b, rp_b = market_b.rvf(num_b)
+#     aq = numpy.column_stack((aq_a, aq_b))
+#     dp = numpy.column_stack((dp_a, dp_b))
+#     rp = numpy.column_stack((rp_a, rp_b))
+#     aq_list = []
+#     dp_list = []
+#     rp_list = []
+#     for i in range(len(aq)):
+#         aq_list.append(KernelMixDistribution(aq[i]))
+#         dp_list.append(KernelMixDistribution(dp[i]))
+#         rp_list.append(KernelMixDistribution(rp[i]))
+#     aq_series = DistributiveSeries(*[ClampedDistribution(i, *aq_range) for i in aq_list])
+#     dp_series = DistributiveSeries(*[ClampedDistribution(i, *dp_range) for i in dp_list])
+#     rp_series = DistributiveSeries(*[ClampedDistribution(i, *rp_range) for i in rp_list])
+#     return DistributiveMarket(aq_series, dp_series, rp_series)
 
 
 if __name__ == "__main__":
-    # kc = OrdinaryGaussianKernelDistributionConstructor(
-    #     (20, 50), (1, 10), (2, 4)
-    # )
-    # r = kc.random(10)
-    # for i in r:
-    #     data = i.rvf(100)
-    #     pyplot.hist(data)
-    # pyplot.show()
+    from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.kernel2 import silverman_bandwidth
 
-    aq = OrdinaryGaussianKernelDistributionConstructor((20, 50), (1, 10), (2, 4))
-    dp = OrdinaryGaussianKernelDistributionConstructor((0, 5), (1, 5), (2, 4))
-    rp = OrdinaryGaussianKernelDistributionConstructor((0, 5), (1, 5), (2, 4))
-    #
-    mc = MarketConstructor(aq, dp, rp)
-    mc.clamped_random(4, (0, 50), (0, numpy.inf), (0, numpy.inf)).plot()
-    # mc.clamped_random(10, (0, 50), (0, numpy.inf), (0, numpy.inf))
-    # #
-    # rm = mc.random(4)
-    # pm = mc.random(4)
-    # # #
-    # rs = rm.random_sample()
-    # # # print(rs)
-    # # #
-    # print(pm.crps(rs[0], rs[1], rs[2]))
+    for _ in range(100):
+        dist = OrdinaryGaussianKernelDistributionConstructor((0, 50), (0.1, 50), (2, 8)).random(4)
+        for d in dist:
+            try:
+                kd = KernelMixDistribution(d.rvf(1000))
+            except:
+                print(d.kernel_data(1))
+
