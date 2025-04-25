@@ -22,7 +22,8 @@ from collections import namedtuple
 from easy_utils.number_utils.calculus_utils import n_integrate
 from data_utils.stochastic_utils.vdistributions.abstract import AbstractDistribution
 from data_utils.stochastic_utils.vdistributions.tools.convert import generate_correlated_sample_matrix
-from data_utils.stochastic_utils.vdistributions.tools.divergence import kl_divergence_continuous, crps, quantile_RMSE
+from data_utils.stochastic_utils.vdistributions.tools.divergence import kl_divergence_continuous, crps, quantile_RMSE, \
+    js_divergence_continuous
 
 from etrade.spot.trader import Station
 from etrade.spot.market.recycle import Recycle
@@ -244,7 +245,7 @@ class DistributiveMarket:
         l = []
         for i in range(self.power_generation.len):
             l.append(
-                kl_divergence_continuous(
+                js_divergence_continuous(
                     self.dayahead_price.distributions[i],
                     self.realtime_price.distributions[i]
                 )

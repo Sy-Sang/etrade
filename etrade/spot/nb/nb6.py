@@ -60,6 +60,10 @@ class MixedMarket:
         self.noice_market = mc.random(4)
         self.predicted_market = market_hybridization(self.real_market, self.noice_market, self.n0, self.n1)
 
+    # def replicate_noice_bandwidth_refresh(self):
+    #     self.real_market = mc.random(4)
+    #     noice_bandwidth = self.noice_market.d
+
     def observed(self):
         return self.real_market.random_sample(self.aq_range, self.dp_range, self.rp_range)
 

@@ -110,12 +110,6 @@ class MarketConstructor:
         rp = DistributiveSeries(*self.rp_constructor.random(num))
         return DistributiveMarket(aq, dp, rp)
 
-    # def clamped_random(self, num, aq_range, dp_range, rp_range):
-    #     aq = DistributiveSeries(*[ClampedDistribution(i, *aq_range) for i in self.aq_constructor.random(num)])
-    #     dp = DistributiveSeries(*[ClampedDistribution(i, *dp_range) for i in self.dp_constructor.random(num)])
-    #     rp = DistributiveSeries(*[ClampedDistribution(i, *rp_range) for i in self.rp_constructor.random(num)])
-    #     return DistributiveMarket(aq, dp, rp)
-
 
 def market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMarket, num_a, num_b):
     def kernel_or_his(data):
