@@ -154,9 +154,12 @@ if __name__ == "__main__":
     s = Station("station", 50)
     br = PointwiseRecycle(0.5, 1.05)
     with multiprocessing.Pool(processes=os.cpu_count()) as pool:
-        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(50))
+        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(200))
 
-    print(numpy.asarray(l).tolist())
+    # print(numpy.asarray(l).tolist())
+    with open(r"data\market_simulator_1.json", "w") as f:
+        f.write(json.dumps({"data": numpy.asarray(l).tolist()}))
+
     print(TimeStamp.now() - t0)
 
     # aq = OrdinaryGaussianKernelDistributionConstructor((0, 50), (0.1, 10), (2, 8))
