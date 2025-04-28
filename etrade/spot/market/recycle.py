@@ -62,8 +62,12 @@ class PointwiseRecycle(BasicRecycle):
     def penalty_q(self, aq_table, sq):
         """判断是否惩罚"""
         aq_table = numpy.atleast_2d(aq_table)
-        sq = numpy.expand_dims(sq, axis=1)
-        sq = numpy.broadcast_to(sq, aq_table.shape)
+        sq = numpy.asarray(sq)
+        if sq.shape == aq_table.shape:
+            pass
+        else:
+            sq = numpy.expand_dims(sq, axis=1)
+            sq = numpy.broadcast_to(sq, aq_table.shape)
         condition = (aq_table > (1 + self.bias_ratio) * sq) | (aq_table < self.bias_ratio * sq)
         # return numpy.any(condition, axis=0)
         return condition

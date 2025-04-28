@@ -111,12 +111,13 @@ class MarketConstructor:
         return DistributiveMarket(aq, dp, rp)
 
 
-def market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMarket, num_a, num_b):
+def market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMarket, num_a, num_b, kernel_num=None):
     def kernel_or_his(data):
         try:
-            return KernelMixDistribution(data)
+            return KernelMixDistribution(data, kernel_num=kernel_num)
         except Exception as e:
-            print(f"[Fallback] KernelMix failed: {e} — switching to HistogramDistribution")
+            # print(f"[Fallback] KernelMix failed: {e} — switching to HistogramDistribution")
+            print(f"[Fallback] KernelMix failed: — switching to HistogramDistribution")
             return HistogramDistribution(data)
 
     aq_a, dp_a, rp_a = market_a.rvf(num_a)
@@ -131,31 +132,13 @@ def market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMar
         aq_list.append(kernel_or_his(aq[i]))
         dp_list.append(kernel_or_his(dp[i]))
         rp_list.append(kernel_or_his(rp[i]))
-    aq_series = DistributiveSeries(*aq_list)
-    dp_series = DistributiveSeries(*dp_list)
-    rp_series = DistributiveSeries(*rp_list)
+    if num_b == 0:
+        return copy.deepcopy(market_a)
+    else:
+        aq_series = DistributiveSeries(*aq_list)
+        dp_series = DistributiveSeries(*dp_list)
+        rp_series = DistributiveSeries(*rp_list)
     return DistributiveMarket(aq_series, dp_series, rp_series)
-
-
-# def clamped_market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMarket, num_a, num_b, aq_range,
-#                                  dp_range,
-#                                  rp_range):
-#     aq_a, dp_a, rp_a = market_a.rvf(num_a)
-#     aq_b, dp_b, rp_b = market_b.rvf(num_b)
-#     aq = numpy.column_stack((aq_a, aq_b))
-#     dp = numpy.column_stack((dp_a, dp_b))
-#     rp = numpy.column_stack((rp_a, rp_b))
-#     aq_list = []
-#     dp_list = []
-#     rp_list = []
-#     for i in range(len(aq)):
-#         aq_list.append(KernelMixDistribution(aq[i]))
-#         dp_list.append(KernelMixDistribution(dp[i]))
-#         rp_list.append(KernelMixDistribution(rp[i]))
-#     aq_series = DistributiveSeries(*[ClampedDistribution(i, *aq_range) for i in aq_list])
-#     dp_series = DistributiveSeries(*[ClampedDistribution(i, *dp_range) for i in dp_list])
-#     rp_series = DistributiveSeries(*[ClampedDistribution(i, *rp_range) for i in rp_list])
-#     return DistributiveMarket(aq_series, dp_series, rp_series)
 
 
 if __name__ == "__main__":

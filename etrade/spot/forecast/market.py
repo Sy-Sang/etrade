@@ -81,16 +81,21 @@ class DistributiveMarket:
             "realtime_price": self.realtime_price.distributions
         })
 
-    def plot(self, curve_index=1):
+    def plot(self, curve_index=1, num=100):
         """显示pyplot"""
         counter = 1
         for i in range(3):
             for j in range(self.power_generation.len):
                 pyplot.subplot(3, self.power_generation.len, counter)
-                curve = self.map[i].distributions[j].curves()[curve_index]
+                curve = self.map[i].distributions[j].curves(num)[curve_index]
                 pyplot.plot(curve[:, 0], curve[:, 1])
                 counter += 1
         pyplot.show()
+
+    def plot2(self, curve_index=1, num=100):
+        counter = 1
+        for i in range(self.power_generation.len):
+            pyplot.subplot(3, 1, counter)
 
     def rvf(self, num: int, aq_range=(-numpy.inf, numpy.inf), dp_range=(-numpy.inf, numpy.inf),
             rp_range=(-numpy.inf, numpy.inf)):
@@ -132,8 +137,11 @@ class DistributiveMarket:
     def trade(cls, station: Station, aq, dp, rp, x):
         """交易"""
         x = numpy.asarray(x)
-        x = numpy.expand_dims(x, axis=1)
-        x = numpy.broadcast_to(x, aq.shape)
+        if x.shape == aq.shape:
+            pass
+        else:
+            x = numpy.expand_dims(x, axis=1)
+            x = numpy.broadcast_to(x, aq.shape)
         return numpy.sum(station.trade(aq, x, dp, rp), axis=0)
 
     @classmethod
@@ -157,7 +165,7 @@ class DistributiveMarket:
 
         result = differential_evolution(
             f,
-            [(q_min, q_max)] * 4,
+            [(q_min, q_max)] * self.power_generation.len,
             strategy='best1bin',  # 变异策略
             # popsize=10,  # 种群大小（默认15，越小越快但精度低）
             # mutation=(0.5, 1.0),  # 变异范围
@@ -181,7 +189,7 @@ class DistributiveMarket:
                                         realtime_price, x)
             ) * -1
 
-        result = minimize(f, mean[0], bounds=[(q_min, q_max)] * 4)
+        result = minimize(f, mean[0], bounds=[(q_min, q_max)] * self.power_generation.len)
         return result
 
     @classmethod
@@ -194,7 +202,7 @@ class DistributiveMarket:
                 cls.trade_with_recycle(station, recycle, aq, dp, rp, x)
             ) * -1
 
-        result = differential_evolution(f, [(q_min, q_max)] * 4, strategy='best1bin',
+        result = differential_evolution(f, [(q_min, q_max)] * len(aq), strategy='best1bin',
                                         mutation=(0.5, 1), recombination=0.7,
                                         popsize=15, maxiter=1000, tol=1e-6)
         return result
