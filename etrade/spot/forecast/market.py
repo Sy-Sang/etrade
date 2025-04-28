@@ -73,6 +73,7 @@ class DistributiveMarket:
             1: self.dayahead_price,
             2: self.realtime_price
         }
+        self.market_len = self.power_generation.len
 
     def __repr__(self):
         return str({
@@ -252,12 +253,13 @@ class DistributiveMarket:
         """价格的kl散度"""
         l = []
         for i in range(self.power_generation.len):
-            l.append(
-                js_divergence_continuous(
-                    self.dayahead_price.distributions[i],
-                    self.realtime_price.distributions[i]
-                )
-            )
+            # l.append(
+            #     js_divergence_continuous(
+            #         self.dayahead_price.distributions[i],
+            #         self.realtime_price.distributions[i]
+            #     )
+            # )
+            l.append(self.pdf_difference())
         return numpy.asarray(l)
 
     def quantile_rmse_matrix(self):
@@ -272,6 +274,24 @@ class DistributiveMarket:
                 )
             m.append(row)
         return m
+
+    def pdf_difference(self, num=100):
+        v = []
+        for i in range(self.market_len):
+            dayahead_domain = self.dayahead_price.distributions[i].domain()
+            realtime_domain = self.realtime_price.distributions[i].domain()
+            domain_min = numpy.min([dayahead_domain[0], realtime_domain[0]])
+            domain_max = numpy.max([dayahead_domain[1], realtime_domain[1]])
+            x = numpy.linspace(domain_min, domain_max, num)
+            v.append(
+                numpy.sum(
+                    self.dayahead_price.distributions[i].pdf(x) - self.realtime_price.distributions[i].pdf(x) ** 2
+                )
+            )
+        return v
+
+
+
 
 
 if __name__ == "__main__":
