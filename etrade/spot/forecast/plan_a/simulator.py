@@ -134,7 +134,8 @@ def run_once(_, init_kwargs: dict, station, recycle):
     oc = mm.observed_crps()
     # mm.replicate_noice_bandwidth_refresh()
     mm.refresh()
-    kl = mm.predicted_market.price_kl_divergence()
+    # kl = mm.predicted_market.price_kl_divergence()
+    kl = mm.predicted_market.ppf_difference()
     z = mm.zero_quantile(station, recycle)
     print(f"Task done in {time.time() - t:.2f}s")
     return numpy.concatenate((
