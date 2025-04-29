@@ -166,6 +166,20 @@ if __name__ == "__main__":
         "market_len": 1,
         "kernel_num": None
     }
+
+    init_kwargs_1 = {
+        "aq_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 60), (1, 10), (2, 10)),
+        "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 15), (1, 10), (2, 10)),
+        "rp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 20), (1, 10), (2, 10)),
+        "aq_range": (0, 50),
+        "dp_range": (0, 1e+6),
+        "rp_range": (0, 1e+6),
+        "real_market": 100,
+        "noise_weight": 0,
+        "market_len": 1,
+        "kernel_num": None
+    }
+
     s = Station("station", 50)
     br = PointwiseRecycle(0.5, 1.05)
     with multiprocessing.Pool(processes=os.cpu_count()) as pool:
@@ -175,7 +189,7 @@ if __name__ == "__main__":
         f.write(json.dumps({"data": numpy.asarray(l).tolist()}))
 
     with multiprocessing.Pool(processes=os.cpu_count()) as pool:
-        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(600))
+        l = pool.map(partial(run_once, init_kwargs=init_kwargs_1, station=s, recycle=br), range(600))
 
     with open(r"data\market_simulator_4.json", "w") as f:
         f.write(json.dumps({"data": numpy.asarray(l).tolist()}))
