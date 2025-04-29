@@ -127,6 +127,10 @@ class MarketSimulator:
         opt, unopt = self.optimized_trade(station, recycle, rounds)
         return zero_quantile(opt, unopt)
 
+    def alpha(self, station: Station, recycle: BasicRecycle, rounds=1000):
+        opt, unopt = self.optimized_trade(station, recycle, rounds)
+        return numpy.sum(opt - unopt)
+
 
 def run_once(_, init_kwargs: dict, station, recycle):
     t = time.time()
@@ -135,8 +139,8 @@ def run_once(_, init_kwargs: dict, station, recycle):
     # mm.replicate_noice_bandwidth_refresh()
     mm.refresh()
     # kl = mm.predicted_market.price_kl_divergence()
-    kl = mm.predicted_market.ppf_difference()
-    z = mm.zero_quantile(station, recycle)
+    kl = mm.predicted_market.ppf_difference(5)
+    z = mm.alpha(station, recycle)
     print(f"Task done in {time.time() - t:.2f}s")
     return numpy.concatenate((
         numpy.asarray(oc).reshape(-1),
@@ -165,7 +169,7 @@ if __name__ == "__main__":
     s = Station("station", 50)
     br = PointwiseRecycle(0.5, 1.05)
     with multiprocessing.Pool(processes=os.cpu_count()) as pool:
-        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(400))
+        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(2000))
 
     with open(r"data\market_simulator_3.json", "w") as f:
         f.write(json.dumps({"data": numpy.asarray(l).tolist()}))
