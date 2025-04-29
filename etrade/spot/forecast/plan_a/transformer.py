@@ -53,7 +53,7 @@ class MarketSampleTransformer(nn.Module):
     def __init__(self, features_num=63, emb_dim=32, nhead=4, nlayers=2):
         super().__init__()
         self.embedding = nn.Linear(features_num, emb_dim)  # 60维输入, embed到更高维
-        self.norm = nn.LayerNorm(emb_dim)
+        # self.norm = nn.LayerNorm(emb_dim)
         encoder_layer = nn.TransformerEncoderLayer(d_model=emb_dim, nhead=nhead)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=nlayers)
         self.head = nn.Linear(emb_dim, 1)  # 输出 zero_quantile
@@ -61,7 +61,7 @@ class MarketSampleTransformer(nn.Module):
     def forward(self, x):
         # x: (batch_size, 60)
         x = self.embedding(x)  # (batch_size, emb_dim)
-        x = self.norm(x)
+        # x = self.norm(x)
         x = x.unsqueeze(1)  # (batch_size, seq_len=1, emb_dim)
         x = self.transformer_encoder(x)  # (batch_size, seq_len=1, emb_dim)
         x = x.mean(dim=1)  # mean pooling (seq_len维度)

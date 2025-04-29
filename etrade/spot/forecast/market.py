@@ -314,6 +314,7 @@ class DistributiveMarket:
                 # log_diff(dayahead_ppf),
                 # log_diff(realtime_ppf)
                 power_ppf, dayahead_ppf, realtime_ppf
+                # dayahead_ppf, realtime_ppf
             ))
         return v
 

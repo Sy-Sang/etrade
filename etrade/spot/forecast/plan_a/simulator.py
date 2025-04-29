@@ -129,7 +129,7 @@ class MarketSimulator:
 
     def alpha(self, station: Station, recycle: BasicRecycle, rounds=1000):
         opt, unopt = self.optimized_trade(station, recycle, rounds)
-        return numpy.sum(opt - unopt)
+        return numpy.sum(opt - unopt) / rounds
 
 
 def run_once(_, init_kwargs: dict, station, recycle):
@@ -169,13 +169,13 @@ if __name__ == "__main__":
     s = Station("station", 50)
     br = PointwiseRecycle(0.5, 1.05)
     with multiprocessing.Pool(processes=os.cpu_count()) as pool:
-        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(2000))
+        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(3000))
 
     with open(r"data\market_simulator_3.json", "w") as f:
         f.write(json.dumps({"data": numpy.asarray(l).tolist()}))
 
     with multiprocessing.Pool(processes=os.cpu_count()) as pool:
-        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(400))
+        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(600))
 
     with open(r"data\market_simulator_4.json", "w") as f:
         f.write(json.dumps({"data": numpy.asarray(l).tolist()}))
