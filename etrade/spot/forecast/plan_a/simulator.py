@@ -131,6 +131,11 @@ class MarketSimulator:
         opt, unopt = self.optimized_trade(station, recycle, rounds)
         return numpy.sum(opt - unopt) / rounds
 
+    def quantile_alpha(self, station: Station, recycle: BasicRecycle, q, rounds=1000):
+        opt, unopt = self.optimized_trade(station, recycle, rounds)
+        diff = opt - unopt
+        return numpy.quantile(diff, q)
+
 
 def run_once(_, init_kwargs: dict, station, recycle):
     t = time.time()
@@ -140,7 +145,7 @@ def run_once(_, init_kwargs: dict, station, recycle):
     mm.refresh()
     # kl = mm.predicted_market.price_kl_divergence()
     kl = mm.predicted_market.ppf_difference(5)
-    z = mm.alpha(station, recycle)
+    z = mm.quantile_alpha(station, recycle, 0.4)
     print(f"Task done in {time.time() - t:.2f}s")
     return numpy.concatenate((
         numpy.asarray(oc).reshape(-1),
@@ -168,9 +173,9 @@ if __name__ == "__main__":
     }
 
     init_kwargs_1 = {
-        "aq_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 60), (1, 10), (2, 10)),
-        "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 15), (1, 10), (2, 10)),
-        "rp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 20), (1, 10), (2, 10)),
+        "aq_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 50), (1, 10), (1, 8)),
+        "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (1, 10), (1, 8)),
+        "rp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (1, 10), (1, 8)),
         "aq_range": (0, 50),
         "dp_range": (0, 1e+6),
         "rp_range": (0, 1e+6),
