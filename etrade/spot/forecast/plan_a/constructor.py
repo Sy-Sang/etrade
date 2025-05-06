@@ -17,7 +17,7 @@ __copyright__ = ""
 import copy
 import pickle
 import json
-from typing import Union, Self, Type
+from typing import Union, Self, Type, Iterable
 from collections import namedtuple
 from abc import ABC, abstractmethod
 
@@ -27,7 +27,7 @@ from data_utils.stochastic_utils.vdistributions.parameter.abstract import Parame
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.basic import NormalDistribution, \
     SkewNormalDistribution, LogNormalDistribution
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.kernel.gaussian import \
-    GaussianKernelMixDistribution
+    GaussianKernelMixDistribution, GaussianKernelWeightedMixDistribution
 from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.kernel2 import KernelMixDistribution
 from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.histogram import HistogramDistribution
 from data_utils.stochastic_utils.vdistributions.tools.clip import ClampedDistribution
@@ -141,6 +141,36 @@ def market_hybridization(market_a: DistributiveMarket, market_b: DistributiveMar
     return DistributiveMarket(aq_series, dp_series, rp_series)
 
 
+def market_hybridization_by_weight(
+        market_a: DistributiveMarket,
+        market_b: DistributiveMarket,
+        num_a: numpy.ndarray,
+        num_b: numpy.ndarray
+):
+    def weight_hybridization(d_a: GaussianKernelMixDistribution, d_b: GaussianKernelMixDistribution, w_r_a, w_r_b):
+        k_a = d_a.kernel_data(None)
+        w_a = numpy.full(k_a.shape[0], w_r_a)
+        k_b = d_b.kernel_data(None)
+        w_b = numpy.full(k_b.shape[0], w_r_b)
+        arg_a = numpy.column_stack((k_a, w_a))
+        arg_b = numpy.column_stack((k_b, w_b))
+        args = numpy.concatenate((arg_a, arg_b))
+        return GaussianKernelWeightedMixDistribution(*args)
+
+    def series_hybridization(s_a: DistributiveSeries, s_b: DistributiveSeries, w_r_a, w_r_b):
+        d = []
+        for i in range(s_a.len):
+            d.append(weight_hybridization(
+                s_a.distributions[i], s_b.distributions[i], w_r_a[i], w_r_b[i]
+            ))
+        return DistributiveSeries(*d)
+
+    pg = series_hybridization(market_a.power_generation, market_b.power_generation, num_a[0], num_b[0])
+    dp = series_hybridization(market_a.dayahead_price, market_b.dayahead_price, num_a[1], num_b[1])
+    rp = series_hybridization(market_a.realtime_price, market_b.realtime_price, num_a[2], num_b[2])
+    return DistributiveMarket(pg, dp, rp)
+
+
 if __name__ == "__main__":
     from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.kernel2 import silverman_bandwidth
 
@@ -151,4 +181,3 @@ if __name__ == "__main__":
                 kd = KernelMixDistribution(d.rvf(1000))
             except:
                 print(d.kernel_data(1))
-

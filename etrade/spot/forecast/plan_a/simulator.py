@@ -25,6 +25,7 @@ import os
 from functools import partial
 
 # 项目模块
+from easy_utils.number_utils.number_utils import EasyFloat
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.basic import NormalDistribution
 from etrade.spot.forecast.market import DistributiveSeries, DistributiveMarket
 from etrade.spot.forecast.plan_a.constructor import *
@@ -62,9 +63,9 @@ class MarketSimulator:
         self.real_weight = real_market
         self.noise_weight = noise_weight
         self.real_market = self.mc.random(market_len)
-        self.noice_market = self.mc.random(market_len)
+        self.noise_market = self.mc.random(market_len)
         self.predicted_market = market_hybridization(
-            self.real_market, self.noice_market, self.real_weight, self.noise_weight, kernel_num
+            self.real_market, self.noise_market, self.real_weight, self.noise_weight, kernel_num
         )
         self.aq_range = aq_range
         self.dp_range = dp_range
@@ -73,15 +74,15 @@ class MarketSimulator:
 
     def refresh(self):
         self.real_market = self.mc.random(self.market_len)
-        self.noice_market = self.mc.random(self.market_len)
-        self.predicted_market = market_hybridization(self.real_market, self.noice_market, self.real_weight,
+        self.noise_market = self.mc.random(self.market_len)
+        self.predicted_market = market_hybridization(self.real_market, self.noise_market, self.real_weight,
                                                      self.noise_weight)
 
     def replicate_noice_bandwidth_refresh(self):
         """保留噪音bandwidth的refresh"""
-        aq_dist_list: list[GaussianKernelMixDistribution] = list(self.noice_market.power_generation.distributions)
-        dp_dist_list: list[GaussianKernelMixDistribution] = list(self.noice_market.dayahead_price.distributions)
-        rp_dist_list: list[GaussianKernelMixDistribution] = list(self.noice_market.realtime_price.distributions)
+        aq_dist_list: list[GaussianKernelMixDistribution] = list(self.noise_market.power_generation.distributions)
+        dp_dist_list: list[GaussianKernelMixDistribution] = list(self.noise_market.dayahead_price.distributions)
+        rp_dist_list: list[GaussianKernelMixDistribution] = list(self.noise_market.realtime_price.distributions)
         for i in range(self.market_len):
             aq_dist_list[i] = matched_gaussian_kernel_distribution_builder(aq_dist_list[i].kernel_data())
             dp_dist_list[i] = matched_gaussian_kernel_distribution_builder(dp_dist_list[i].kernel_data())
@@ -89,9 +90,9 @@ class MarketSimulator:
         aq = DistributiveSeries(*aq_dist_list)
         dp = DistributiveSeries(*dp_dist_list)
         rp = DistributiveSeries(*rp_dist_list)
-        self.noice_market = DistributiveMarket(aq, dp, rp)
+        self.noise_market = DistributiveMarket(aq, dp, rp)
         self.real_market = self.mc.random(self.market_len)
-        self.predicted_market = market_hybridization(self.real_market, self.noice_market, self.real_weight,
+        self.predicted_market = market_hybridization(self.real_market, self.noise_market, self.real_weight,
                                                      self.noise_weight)
 
     def observe(self):
@@ -131,10 +132,48 @@ class MarketSimulator:
         opt, unopt = self.optimized_trade(station, recycle, rounds)
         return numpy.sum(opt - unopt) / rounds
 
-    def quantile_alpha(self, station: Station, recycle: BasicRecycle, q, rounds=1000):
+    def alpha_quantile(self, station: Station, recycle: BasicRecycle, q, rounds=1000):
         opt, unopt = self.optimized_trade(station, recycle, rounds)
         diff = opt - unopt
-        return numpy.quantile(diff, q)
+        return numpy.quantile(opt, EasyFloat.frange(0.1, 0.9, 0.1, True)), numpy.quantile(diff, q)
+
+
+class WeightGaussianMarketSimulator(MarketSimulator):
+    """
+    按核权重添加噪音的市场模拟器
+    """
+
+    def __init__(
+            self,
+            aq_constructor: OrdinaryGaussianKernelDistributionConstructor,
+            dp_constructor: OrdinaryGaussianKernelDistributionConstructor,
+            rp_constructor: OrdinaryGaussianKernelDistributionConstructor,
+            aq_range=(-numpy.inf, numpy.inf),
+            dp_range=(-numpy.inf, numpy.inf),
+            rp_range=(-numpy.inf, numpy.inf),
+            real_weight=numpy.ones((3, 4)), noise_weight=numpy.ones((3, 4)), market_len=4
+    ):
+        # super().__init__(aq_constructor, dp_constructor, rp_constructor, aq_range, dp_range, rp_range, real_market,
+        #                  noise_weight, market_len, kernel_num)
+        self.mc = MarketConstructor(aq_constructor, dp_constructor, rp_constructor)
+        self.real_weight = real_weight
+        self.noise_weight = noise_weight
+        self.real_market = self.mc.random(market_len)
+        self.noise_market = self.mc.random(market_len)
+        self.predicted_market = market_hybridization_by_weight(
+            self.real_market, self.noise_market, self.real_weight, self.noise_weight
+        )
+        self.aq_range = aq_range
+        self.dp_range = dp_range
+        self.rp_range = rp_range
+        self.market_len = market_len
+
+    def refresh(self):
+        self.real_market = self.mc.random(self.market_len)
+        self.noise_market = self.mc.random(self.market_len)
+        self.predicted_market = market_hybridization_by_weight(
+            self.real_market, self.noise_market, self.real_weight, self.noise_weight
+        )
 
 
 def run_once(_, init_kwargs: dict, station, recycle):
@@ -145,11 +184,12 @@ def run_once(_, init_kwargs: dict, station, recycle):
     mm.refresh()
     # kl = mm.predicted_market.price_kl_divergence()
     kl = mm.predicted_market.ppf_difference(5)
-    z = mm.quantile_alpha(station, recycle, 0.4)
+    opt, z = mm.alpha_quantile(station, recycle, 0.2)
     print(f"Task done in {time.time() - t:.2f}s")
     return numpy.concatenate((
         numpy.asarray(oc).reshape(-1),
         numpy.asarray(kl).reshape(-1),
+        opt,
         numpy.atleast_1d(z).reshape(-1)
     ))
 
