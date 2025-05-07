@@ -113,8 +113,17 @@ class MarketSimulator:
     def optimize(self, station: Station, recycle: BasicRecycle, rounds=1000):
         return self.predicted_market.submitted_quantity_optimizer(station, recycle, *self.random(rounds)).x
 
-    def optimized_trade(self, station: Station, recycle: BasicRecycle, rounds=1000):
-        x = self.optimize(station, recycle, rounds)
+    def predicted_market_trade(self, x, station: Station, recycle: BasicRecycle, rounds=1000):
+        power_generation, dayahead_price, realtime_price = self.predicted_market.rvf(
+            rounds, self.aq_range, self.dp_range, self.rp_range
+        )
+        return self.predicted_market.trade_with_recycle(
+            station, recycle, power_generation, dayahead_price, realtime_price, x
+        ), self.predicted_market.trade_with_recycle(
+            station, recycle, power_generation, dayahead_price, realtime_price, self.predicted_market.mean(rounds)[0]
+        )
+
+    def real_market_trade(self, x, station: Station, recycle: BasicRecycle, rounds=1000):
         power_generation, dayahead_price, realtime_price = self.real_market.rvf(
             rounds, self.aq_range, self.dp_range, self.rp_range
         )
@@ -124,59 +133,15 @@ class MarketSimulator:
             station, recycle, power_generation, dayahead_price, realtime_price, self.real_market.mean(rounds)[0]
         )
 
-    def zero_quantile(self, station: Station, recycle: BasicRecycle, rounds=1000):
-        opt, unopt = self.optimized_trade(station, recycle, rounds)
-        return zero_quantile(opt, unopt)
-
-    def alpha(self, station: Station, recycle: BasicRecycle, rounds=1000):
-        opt, unopt = self.optimized_trade(station, recycle, rounds)
-        return numpy.sum(opt - unopt) / rounds
-
-    def alpha_quantile(self, station: Station, recycle: BasicRecycle, q, rounds=1000):
-        opt, unopt = self.optimized_trade(station, recycle, rounds)
-        diff = opt - unopt
-        return numpy.quantile(opt, EasyFloat.frange(0.1, 0.9, 0.1, True)), numpy.quantile(diff, q)
+    def alpha_quantile(self, opt, unopt, q):
+        diff = numpy.asarray(opt) - numpy.asarray(unopt)
+        return numpy.quantile(diff, q)
 
 
-class WeightGaussianMarketSimulator(MarketSimulator):
-    """
-    按核权重添加噪音的市场模拟器
-    """
-
-    def __init__(
-            self,
-            aq_constructor: OrdinaryGaussianKernelDistributionConstructor,
-            dp_constructor: OrdinaryGaussianKernelDistributionConstructor,
-            rp_constructor: OrdinaryGaussianKernelDistributionConstructor,
-            aq_range=(-numpy.inf, numpy.inf),
-            dp_range=(-numpy.inf, numpy.inf),
-            rp_range=(-numpy.inf, numpy.inf),
-            real_weight=numpy.ones((3, 4)), noise_weight=numpy.ones((3, 4)), market_len=4
-    ):
-        # super().__init__(aq_constructor, dp_constructor, rp_constructor, aq_range, dp_range, rp_range, real_market,
-        #                  noise_weight, market_len, kernel_num)
-        self.mc = MarketConstructor(aq_constructor, dp_constructor, rp_constructor)
-        self.real_weight = real_weight
-        self.noise_weight = noise_weight
-        self.real_market = self.mc.random(market_len)
-        self.noise_market = self.mc.random(market_len)
-        self.predicted_market = market_hybridization_by_weight(
-            self.real_market, self.noise_market, self.real_weight, self.noise_weight
-        )
-        self.aq_range = aq_range
-        self.dp_range = dp_range
-        self.rp_range = rp_range
-        self.market_len = market_len
-
-    def refresh(self):
-        self.real_market = self.mc.random(self.market_len)
-        self.noise_market = self.mc.random(self.market_len)
-        self.predicted_market = market_hybridization_by_weight(
-            self.real_market, self.noise_market, self.real_weight, self.noise_weight
-        )
 
 
-def run_once(_, init_kwargs: dict, station, recycle):
+
+def run_once(_, init_kwargs: dict, station, recycle, rounds=1000):
     t = time.time()
     mm = MarketSimulator(**init_kwargs)
     oc = mm.observed_crps()
@@ -184,12 +149,20 @@ def run_once(_, init_kwargs: dict, station, recycle):
     mm.refresh()
     # kl = mm.predicted_market.price_kl_divergence()
     kl = mm.predicted_market.ppf_difference(5)
-    opt, z = mm.alpha_quantile(station, recycle, 0.2)
+    # opt, z = mm.alpha_quantile(station, recycle, 0.2)
+    x = mm.optimize(station, recycle, rounds)
+    opt, unopt = mm.predicted_market_trade(x, station, recycle, rounds)
+    ropt, runopt = mm.real_market_trade(x, station, recycle, rounds)
+    z = mm.alpha_quantile(ropt, runopt, 0.2)
+
     print(f"Task done in {time.time() - t:.2f}s")
     return numpy.concatenate((
         numpy.asarray(oc).reshape(-1),
         numpy.asarray(kl).reshape(-1),
-        opt,
+        numpy.quantile(
+            numpy.asarray(opt) - numpy.asarray(unopt),
+            EasyFloat.frange(0.1, 0.9, 0.1, True)
+        ),
         numpy.atleast_1d(z).reshape(-1)
     ))
 
