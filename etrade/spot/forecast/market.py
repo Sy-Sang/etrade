@@ -249,74 +249,85 @@ class DistributiveMarket:
             )
         return numpy.asarray(l)
 
-    def price_kl_divergence(self):
-        """价格的kl散度"""
-        l = []
-        for i in range(self.power_generation.len):
-            l.append(
-                js_divergence_continuous(
-                    self.dayahead_price.distributions[i],
-                    self.realtime_price.distributions[i]
-                )
-            )
-        return numpy.asarray(l)
-
-    def quantile_rmse_matrix(self):
-        """kl散度矩阵"""
+    def curve_matrix(self, curve_index=0):
         m = []
-        for r in range(3):
-            row = []
-            for c in range(self.power_generation.len):
-                row.append(
-                    [quantile_RMSE(self.map[r].distributions[c], self.map[r].distributions[i]) for i in
-                     range(self.power_generation.len)]
-                )
-            m.append(row)
-        return m
-
-    def pdf_difference(self, num=100):
-        v = []
         for i in range(self.market_len):
-            dayahead_domain = self.dayahead_price.distributions[i].domain()
-            realtime_domain = self.realtime_price.distributions[i].domain()
-            domain_min = numpy.min([dayahead_domain[0], realtime_domain[0]])
-            domain_max = numpy.max([dayahead_domain[1], realtime_domain[1]])
-            x = numpy.linspace(domain_min, domain_max, num)
-            v.append(
-                numpy.sum(
-                    self.dayahead_price.distributions[i].pdf(x) - self.realtime_price.distributions[i].pdf(x) ** 2
-                )
-            )
-        return v
+            column = [
+                self.power_generation.distributions[i].curves(10, 0.1)[curve_index][:,1],
+                self.dayahead_price.distributions[i].curves(10, 0.1)[curve_index][:,1],
+                self.realtime_price.distributions[i].curves(10, 0.1)[curve_index][:,1],
+            ]
+            m.append(column)
+        return numpy.asarray(m).reshape(-1)
 
-    def ppf_difference(self, num=20):
-        def to_positive(x):
-            delta = 1 - numpy.min(x)
-            return x + delta
-
-        def log_diff(x):
-            return numpy.diff(numpy.log(to_positive(x)))
-
-        def zscore(x):
-            std = numpy.std(x, ddof=1)
-            if std == 0:
-                raise Exception("[error]: std=0")
-            else:
-                return (x - numpy.mean(x)) / numpy.std(x, ddof=1)
-
-        v = numpy.empty((self.market_len, (num - 0) * 3))
-        for i in range(self.market_len):
-            power_ppf = self.power_generation.distributions[i].curves(num, 0.01)[0][:, 1]
-            dayahead_ppf = self.dayahead_price.distributions[i].curves(num, 0.01)[0][:, 1]
-            realtime_ppf = self.realtime_price.distributions[i].curves(num, 0.01)[0][:, 1]
-            v[i] = numpy.concatenate((
-                # log_diff(power_ppf),
-                # log_diff(dayahead_ppf),
-                # log_diff(realtime_ppf)
-                power_ppf, dayahead_ppf, realtime_ppf
-                # dayahead_ppf, realtime_ppf
-            ))
-        return v
+    # def price_kl_divergence(self):
+    #     """价格的kl散度"""
+    #     l = []
+    #     for i in range(self.power_generation.len):
+    #         l.append(
+    #             js_divergence_continuous(
+    #                 self.dayahead_price.distributions[i],
+    #                 self.realtime_price.distributions[i]
+    #             )
+    #         )
+    #     return numpy.asarray(l)
+    #
+    # def quantile_rmse_matrix(self):
+    #     """kl散度矩阵"""
+    #     m = []
+    #     for r in range(3):
+    #         row = []
+    #         for c in range(self.power_generation.len):
+    #             row.append(
+    #                 [quantile_RMSE(self.map[r].distributions[c], self.map[r].distributions[i]) for i in
+    #                  range(self.power_generation.len)]
+    #             )
+    #         m.append(row)
+    #     return m
+    #
+    # def pdf_difference(self, num=100):
+    #     v = []
+    #     for i in range(self.market_len):
+    #         dayahead_domain = self.dayahead_price.distributions[i].domain()
+    #         realtime_domain = self.realtime_price.distributions[i].domain()
+    #         domain_min = numpy.min([dayahead_domain[0], realtime_domain[0]])
+    #         domain_max = numpy.max([dayahead_domain[1], realtime_domain[1]])
+    #         x = numpy.linspace(domain_min, domain_max, num)
+    #         v.append(
+    #             numpy.sum(
+    #                 self.dayahead_price.distributions[i].pdf(x) - self.realtime_price.distributions[i].pdf(x) ** 2
+    #             )
+    #         )
+    #     return v
+    #
+    # def ppf_difference(self, num=20):
+    #     def to_positive(x):
+    #         delta = 1 - numpy.min(x)
+    #         return x + delta
+    #
+    #     def log_diff(x):
+    #         return numpy.diff(numpy.log(to_positive(x)))
+    #
+    #     def zscore(x):
+    #         std = numpy.std(x, ddof=1)
+    #         if std == 0:
+    #             raise Exception("[error]: std=0")
+    #         else:
+    #             return (x - numpy.mean(x)) / numpy.std(x, ddof=1)
+    #
+    #     v = numpy.empty((self.market_len, (num - 0) * 3))
+    #     for i in range(self.market_len):
+    #         power_ppf = self.power_generation.distributions[i].curves(num, 0.01)[0][:, 1]
+    #         dayahead_ppf = self.dayahead_price.distributions[i].curves(num, 0.01)[0][:, 1]
+    #         realtime_ppf = self.realtime_price.distributions[i].curves(num, 0.01)[0][:, 1]
+    #         v[i] = numpy.concatenate((
+    #             # log_diff(power_ppf),
+    #             # log_diff(dayahead_ppf),
+    #             # log_diff(realtime_ppf)
+    #             power_ppf, dayahead_ppf, realtime_ppf
+    #             # dayahead_ppf, realtime_ppf
+    #         ))
+    #     return v
 
 
 if __name__ == "__main__":

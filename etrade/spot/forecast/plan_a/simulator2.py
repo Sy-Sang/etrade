@@ -56,8 +56,6 @@ class WeightGaussianMarketSimulator(MarketSimulator):
             noise_weight=numpy.ones((3, 4)),
             market_len=4
     ):
-        # super().__init__(aq_constructor, dp_constructor, rp_constructor, aq_range, dp_range, rp_range, real_market,
-        #                  noise_weight, market_len, kernel_num)
         self.mc = MarketConstructor(aq_constructor, dp_constructor, rp_constructor)
         self.real_weight = real_weight
         self.noise_weight = noise_weight
@@ -78,16 +76,31 @@ class WeightGaussianMarketSimulator(MarketSimulator):
             self.real_market, self.noise_market, self.real_weight, self.noise_weight
         )
 
+    def historical_observe(self, station: Station, recycle: BasicRecycle, rounds=1000, epoch=3):
+        """用于在run_once中输出历史观测数据"""
+        table = []
+        for _ in range(epoch):
+            observed = self.predicted_market.faster_crps(*self.observe())
+            x = self.optimize(station, recycle, rounds)
+            opt, unopt = self.real_market_trade(x, station, recycle, rounds)
+            curve_data = self.predicted_market.curve_matrix(1)
+            alpha = self.alpha(opt, unopt)
+            row = numpy.concatenate((
+                numpy.array(x).reshape(-1),
+                numpy.asarray(observed).reshape(-1),
+                numpy.asarray(curve_data).reshape(-1),
+                numpy.asarray(alpha).reshape(-1),
+            ))
+            table.append(row)
+            self.refresh()
+        return numpy.asarray(table).reshape(-1)
+
 
 def run_once(_, init_kwargs: dict, station, recycle, rounds=1000):
     t = time.time()
     mm = WeightGaussianMarketSimulator(**init_kwargs)
-    oc = mm.observed_crps()
-    # mm.replicate_noice_bandwidth_refresh()
-    mm.refresh()
-    # kl = mm.predicted_market.price_kl_divergence()
-    kl = mm.predicted_market.ppf_difference(5)
-    # opt, z = mm.alpha_quantile(station, recycle, 0.2)
+    observed = mm.historical_observe(station, recycle, rounds, 3)
+
     x = mm.optimize(station, recycle, rounds)
     opt, unopt = mm.predicted_market_trade(x, station, recycle, rounds)
     ropt, runopt = mm.real_market_trade(x, station, recycle, rounds)
@@ -95,8 +108,9 @@ def run_once(_, init_kwargs: dict, station, recycle, rounds=1000):
 
     print(f"Task done in {time.time() - t:.2f}s")
     return numpy.concatenate((
-        numpy.asarray(oc).reshape(-1),
-        numpy.asarray(kl).reshape(-1),
+        observed,
+        mm.predicted_market.curve_matrix(0),
+        numpy.array(x).reshape(-1),
         numpy.quantile(
             numpy.asarray(opt) - numpy.asarray(unopt),
             EasyFloat.frange(0.1, 0.9, 0.1, True)

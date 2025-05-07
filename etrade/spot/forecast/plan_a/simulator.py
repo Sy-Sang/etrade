@@ -133,12 +133,13 @@ class MarketSimulator:
             station, recycle, power_generation, dayahead_price, realtime_price, self.real_market.mean(rounds)[0]
         )
 
+    def alpha(self, opt, unopt):
+        diff = numpy.asarray(opt) - numpy.asarray(unopt)
+        return numpy.quantile(diff, EasyFloat.frange(0.1, 0.9, 0.1, True))
+
     def alpha_quantile(self, opt, unopt, q):
         diff = numpy.asarray(opt) - numpy.asarray(unopt)
         return numpy.quantile(diff, q)
-
-
-
 
 
 def run_once(_, init_kwargs: dict, station, recycle, rounds=1000):
