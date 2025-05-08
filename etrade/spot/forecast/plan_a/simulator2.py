@@ -78,18 +78,25 @@ class WeightGaussianMarketSimulator(MarketSimulator):
 
     def historical_observe(self, station: Station, recycle: BasicRecycle, rounds=1000, epoch=3):
         """用于在run_once中输出历史观测数据"""
+
+        def observed_alpha(o, x):
+            o_trade = recycle(o[0], o[0], station.trade(o[0], o[0], o[1], o[2]))
+            x_trade = recycle(o[0], x, station.trade(o[0], x, o[1], o[2]))
+            return x_trade - o_trade
+
         table = []
         for _ in range(epoch):
-            observed = self.predicted_market.faster_crps(*self.observe())
+            observed = self.real_market.observe()
+            crps = self.predicted_market.faster_crps(*observed)
             x = self.optimize(station, recycle, rounds)
-            opt, unopt = self.real_market_trade(x, station, recycle, rounds)
-            curve_data = self.predicted_market.curve_matrix(1)
-            alpha = self.alpha(opt, unopt)
+            curve_data = self.predicted_market.curve_matrix(0)
+            alpha = observed_alpha(observed, x)
             row = numpy.concatenate((
-                numpy.array(x).reshape(-1),
                 numpy.asarray(observed).reshape(-1),
+                numpy.asarray(crps).reshape(-1),
                 numpy.asarray(curve_data).reshape(-1),
-                numpy.asarray(alpha).reshape(-1),
+                numpy.array(x).reshape(-1),
+                numpy.asarray(alpha).reshape(-1)
             ))
             table.append(row)
             self.refresh()
@@ -97,6 +104,9 @@ class WeightGaussianMarketSimulator(MarketSimulator):
 
 
 def run_once(_, init_kwargs: dict, station, recycle, rounds=1000):
+    noise_level = numpy.random.uniform(0.01, 0.2)
+    init_kwargs["noise_weight"] = numpy.full((3, 1), noise_level)
+
     t = time.time()
     mm = WeightGaussianMarketSimulator(**init_kwargs)
     observed = mm.historical_observe(station, recycle, rounds, 3)
@@ -153,13 +163,13 @@ if __name__ == "__main__":
     s = Station("station", 50)
     br = PointwiseRecycle(0.5, 1.05)
     with multiprocessing.Pool(processes=os.cpu_count()) as pool:
-        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(3000))
+        l = pool.map(partial(run_once, init_kwargs=init_kwargs, station=s, recycle=br), range(6000))
 
     with open(r"data\market_simulator_5.json", "w") as f:
         f.write(json.dumps({"data": numpy.asarray(l).tolist()}))
 
     with multiprocessing.Pool(processes=os.cpu_count()) as pool:
-        l = pool.map(partial(run_once, init_kwargs=init_kwargs_1, station=s, recycle=br), range(600))
+        l = pool.map(partial(run_once, init_kwargs=init_kwargs_1, station=s, recycle=br), range(300))
 
     with open(r"data\market_simulator_6.json", "w") as f:
         f.write(json.dumps({"data": numpy.asarray(l).tolist()}))

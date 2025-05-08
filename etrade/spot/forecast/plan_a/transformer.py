@@ -69,5 +69,44 @@ class MarketSampleTransformer(nn.Module):
         return out
 
 
+class TabTransformer(nn.Module):
+    def __init__(self, num_numeric, emb_dim=32, num_heads=4, num_layers=2, dropout=0.1):
+        super(TabTransformer, self).__init__()
+
+        # 单独投影每个 numeric 特征
+        self.numeric_proj = nn.ModuleList([
+            nn.Linear(1, emb_dim) for _ in range(num_numeric)
+        ])
+
+        # Transformer 编码器
+        encoder_layer = nn.TransformerEncoderLayer(d_model=emb_dim, nhead=num_heads, dropout=dropout)
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+
+        # 输出 MLP
+        self.output = nn.Sequential(
+            nn.Linear(emb_dim, 64),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(64, 1)  # 回归预测
+        )
+
+    def forward(self, numeric_data):
+        # numeric_data: (batch_size, num_numeric)
+        tokens = []
+        for i, proj in enumerate(self.numeric_proj):
+            feature_i = numeric_data[:, i].unsqueeze(1)  # (batch_size, 1)
+            token_i = proj(feature_i)  # (batch_size, emb_dim)
+            tokens.append(token_i)
+
+        tokens = torch.stack(tokens, dim=1)  # (batch_size, num_numeric, emb_dim)
+        tokens = tokens.permute(1, 0, 2)  # (seq_len, batch_size, emb_dim)
+
+        encoded = self.transformer(tokens)  # (seq_len, batch_size, emb_dim)
+        pooled = encoded.mean(dim=0)  # (batch_size, emb_dim)
+
+        out = self.output(pooled).squeeze(-1)  # (batch_size)
+        return out
+
+
 if __name__ == "__main__":
     pass
