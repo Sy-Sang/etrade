@@ -253,12 +253,31 @@ class DistributiveMarket:
         m = []
         for i in range(self.market_len):
             column = [
-                self.power_generation.distributions[i].curves(10, 0.1)[curve_index][:,1],
-                self.dayahead_price.distributions[i].curves(10, 0.1)[curve_index][:,1],
-                self.realtime_price.distributions[i].curves(10, 0.1)[curve_index][:,1],
+                self.power_generation.distributions[i].curves(10, 0.1)[curve_index][:, 1],
+                self.dayahead_price.distributions[i].curves(10, 0.1)[curve_index][:, 1],
+                self.realtime_price.distributions[i].curves(10, 0.1)[curve_index][:, 1],
             ]
             m.append(column)
         return numpy.asarray(m).reshape(-1)
+
+    def faster_log_score(self, aq, dp, rp):
+        aq = numpy.asarray(aq).reshape(-1)
+        dp = numpy.asarray(dp).reshape(-1)
+        rp = numpy.asarray(rp).reshape(-1)
+        l = [[], [], []]
+        for i in range(self.market_len):
+            l[0].append(
+                numpy.log(self.power_generation.distributions[i].pdf(aq[i]))
+            )
+            l[1].append(
+                numpy.log(self.dayahead_price.distributions[i].pdf(dp[i]))
+            )
+            l[2].append(
+                numpy.log(self.realtime_price.distributions[i].pdf(rp[i]))
+            )
+        return numpy.asarray(l)
+
+
 
     # def price_kl_divergence(self):
     #     """价格的kl散度"""
