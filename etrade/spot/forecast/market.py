@@ -249,13 +249,13 @@ class DistributiveMarket:
             )
         return numpy.asarray(l)
 
-    def curve_matrix(self, curve_index=0):
+    def curve_matrix(self, curve_index=0, curve_len=10, tail_eps=0.1):
         m = []
         for i in range(self.market_len):
             column = [
-                self.power_generation.distributions[i].curves(10, 0.1)[curve_index][:, 1],
-                self.dayahead_price.distributions[i].curves(10, 0.1)[curve_index][:, 1],
-                self.realtime_price.distributions[i].curves(10, 0.1)[curve_index][:, 1],
+                self.power_generation.distributions[i].curves(curve_len, tail_eps)[curve_index][:, 1],
+                self.dayahead_price.distributions[i].curves(curve_len, tail_eps)[curve_index][:, 1],
+                self.realtime_price.distributions[i].curves(curve_len, tail_eps)[curve_index][:, 1],
             ]
             m.append(column)
         return numpy.asarray(m).reshape(-1)
@@ -276,8 +276,6 @@ class DistributiveMarket:
                 numpy.log(self.realtime_price.distributions[i].pdf(rp[i]))
             )
         return numpy.asarray(l)
-
-
 
     # def price_kl_divergence(self):
     #     """价格的kl散度"""

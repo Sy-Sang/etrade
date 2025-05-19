@@ -88,6 +88,7 @@ class WeightGaussianMarketSimulator(MarketSimulator):
         for _ in range(epoch):
             observed = self.real_market.observe()
             crps = self.predicted_market.faster_crps(*observed)
+
             x = self.optimize(station, recycle, rounds)
             curve_data = self.predicted_market.curve_matrix(0)
             alpha = observed_alpha(observed, x)

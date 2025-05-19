@@ -171,6 +171,29 @@ def market_hybridization_by_weight(
     return DistributiveMarket(pg, dp, rp)
 
 
+def market_hybridization_by_observed(data: numpy.ndarray, noise_market: DistributiveMarket, oberved_len, noise_len):
+    """使用观测值构造市场"""
+
+    def _constructor_function(x, noise_dist: AbstractDistribution):
+        xlist = [x] * oberved_len
+        noise_list = noise_dist.rvf(noise_len)
+        return KernelMixDistribution(xlist + noise_list, oberved_len + noise_len)
+
+    pg = DistributiveSeries(*[
+        _constructor_function(data[0][i], noise_market.power_generation.distributions[i]) for i in
+        noise_market.market_len
+    ])
+    dp = DistributiveSeries(*[
+        _constructor_function(data[1][i], noise_market.dayahead_price.distributions[i]) for i in
+        noise_market.market_len
+    ])
+    rp = DistributiveSeries(*[
+        _constructor_function(data[2][i], noise_market.realtime_price.distributions[i]) for i in
+        noise_market.market_len
+    ])
+    return DistributiveMarket(pg, dp, rp)
+
+
 if __name__ == "__main__":
     from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.kernel2 import silverman_bandwidth
 

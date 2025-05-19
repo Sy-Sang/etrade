@@ -39,6 +39,9 @@ from etrade.spot.forecast.plan_a.simulator import MarketSimulator
 import numpy
 
 
+# 代码块
+
+
 class MultiMarketSimulator(MarketSimulator):
     """使用多重预测特征的模拟器"""
 
@@ -96,6 +99,9 @@ class MultiMarketSimulator(MarketSimulator):
         o_trade = station.trade(observed[0], observed[0], observed[1], observed[2])
         return observed, o_trade
 
+    def predicted_ppf(self, market_index=0):
+        return self.predicted_market_list[market_index].curve_matrix(0, 20, 0.01)
+
     def predicted_random(self, market_index=0, rounds=1000):
         power_generation, dayahead_price, realtime_price = self.predicted_market_list[market_index].rvf(
             rounds, self.aq_range, self.dp_range, self.rp_range
@@ -126,6 +132,21 @@ class MultiMarketSimulator(MarketSimulator):
         market = self.predicted_market_list[market_index]
         return market.faster_log_score(aq, dp, rp)
 
+    def index_aggregation(self, predicted_index: numpy.ndarray):
+        l = []
+        pg = predicted_index[:, 0]
+        dp = predicted_index[:, 1]
+        rp = predicted_index[:, 2]
+        for i in range(self.market_len):
+            for j in [pg, dp, rp]:
+                l.append(
+                    numpy.mean(j[:, i])
+                )
+                l.append(
+                    numpy.std(j[:, i], ddof=1)
+                )
+        return l
+
 
 if __name__ == "__main__":
     from easy_datetime.timestamp import TimeStamp
@@ -134,16 +155,16 @@ if __name__ == "__main__":
 
     market_len = 1
     init_kwargs = {
-        "aq_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 50), (1, 10), (1, 8)),
-        "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (1, 10), (1, 8)),
-        "rp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (1, 10), (1, 8)),
+        "aq_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 50), (1, 10), (1, 4)),
+        "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (1, 5), (1, 4)),
+        "rp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (1, 5), (1, 4)),
         "aq_range": (0, 50),
         "dp_range": (0, 1e+6),
         "rp_range": (0, 1e+6),
         "real_weight": numpy.full((3, market_len), 1),
-        "noise_weight": numpy.full((3, market_len), 0.1),
+        "noise_weight": numpy.full((3, market_len), 0.01),
         "market_len": market_len,
-        "p_head": 3
+        "p_head": 10
     }
 
     station = Station("station", 50)
@@ -166,7 +187,15 @@ if __name__ == "__main__":
     # print(*simulator.observed_trade(station)[0])
     #
     print(
-        simulator.predicted_log_score(0, *simulator.observed_trade(station)[0])
+        simulator.index_aggregation(
+            numpy.asarray([simulator.predicted_crps(i, *simulator.observe()) for i in range(10)])
+        )
+
     )
+    #
+    # print(
+    #     [simulator.predicted_crps(i, *simulator.observe()).tolist() for i in range(3)]
+    # )
+    # print(simulator.predicted_ppf(0).tolist())
 
     print(TimeStamp.now() - t0)
