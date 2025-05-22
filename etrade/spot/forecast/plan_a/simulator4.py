@@ -59,6 +59,7 @@ class PredictBasedMarketSimulator:
             rp_range=(-numpy.inf, numpy.inf),
             predict_weight=numpy.ones((3, 4)),
             # noise_weight=numpy.ones((3, 4)),
+            noise_weight_range=((0.01, 0.05), (0.01, 0.05), (0.01, 0.05)),
             market_len=4,
             p_head=3
     ):
@@ -71,6 +72,7 @@ class PredictBasedMarketSimulator:
         self.predict_market = self.mc.random(market_len)
         # self.noise_market_list = []
         # self.predicted_market_list = []
+        self.noise_weight_range = noise_weight_range
 
         self.aq_range = aq_range
         self.dp_range = dp_range
