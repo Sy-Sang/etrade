@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
     t0 = TimeStamp.now()
 
-    market_len = 1
+    market_len = 4
     init_kwargs = {
         "aq_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 50), (1, 10), (1, 4)),
         "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (1, 5), (1, 4)),
@@ -167,22 +167,23 @@ if __name__ == "__main__":
         "aq_range": (0, 50),
         "dp_range": (0, 1e+6),
         "rp_range": (0, 1e+6),
-        "real_weight": numpy.full((3, market_len), 1),
-        "noise_weight": numpy.full((3, market_len), 0.01),
+        "predict_weight": numpy.full((3, market_len), 1),
+        "noise_weight_range": ((0.01, 0.05), (0.01, 0.05), (0.01, 0.05)),
         "market_len": market_len,
         "p_head": 10
     }
 
     station = Station("station", 50)
     br = PointwiseRecycle(0.5, 1.05)
-    simulator = MultiMarketSimulator(**init_kwargs)
+    simulator = PredictBasedMarketSimulator(**init_kwargs)
 
     # for _ in range(20):
     #     o, op = simulator.observed_trade(station, br)
     #     print(o)
     #     print(op)
 
-    aq, dp, rp = simulator.predicted_random(0, 100)
+    aq, dp, rp = simulator.predicted_random(100)
+    print(simulator.predicted_optimize(station, br, aq, dp, rp))
     # x = simulator.predicted_optimize(station, br, aq, dp, rp)
     # print(x)
     # print(simulator.predicted_trade(x, station, br, aq, dp, rp))
@@ -192,12 +193,12 @@ if __name__ == "__main__":
     # )
     # print(*simulator.observed_trade(station)[0])
     #
-    print(
-        simulator.index_aggregation(
-            numpy.asarray([simulator.predicted_crps(i, *simulator.observe()) for i in range(10)])
-        )
-
-    )
+    # print(
+    #     simulator.index_aggregation(
+    #         numpy.asarray([simulator.predicted_crps(i, *simulator.observe()) for i in range(10)])
+    #     )
+    #
+    # )
     #
     # print(
     #     [simulator.predicted_crps(i, *simulator.observe()).tolist() for i in range(3)]
