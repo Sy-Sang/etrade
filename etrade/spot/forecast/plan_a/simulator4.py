@@ -87,7 +87,7 @@ class PredictBasedMarketSimulator:
             station, recycle, power_generation, dayahead_price, realtime_price
         ).x
 
-    def market_trade(
+    def random_sample_trade(
             self, x, station: Station, recycle: BasicRecycle, power_generation, dayahead_price, realtime_price
     ):
         sq = numpy.asarray(x)
@@ -97,28 +97,9 @@ class PredictBasedMarketSimulator:
             DistributiveMarket.trade(station, power_generation, dayahead_price, realtime_price, sq)
         )
 
-    # def predicted_crps(self, market_index, aq, dp, rp):
-    #     market = self.predicted_market_list[market_index]
-    #     return market.faster_crps(aq, dp, rp)
-    #
-    # def predicted_log_score(self, market_index, aq, dp, rp):
-    #     market = self.predicted_market_list[market_index]
-    #     return market.faster_log_score(aq, dp, rp)
-
-    # def index_aggregation(self, predicted_index: numpy.ndarray):
-    #     l = []
-    #     pg = predicted_index[:, 0]
-    #     dp = predicted_index[:, 1]
-    #     rp = predicted_index[:, 2]
-    #     for i in range(self.market_len):
-    #         for j in [pg, dp, rp]:
-    #             l.append(
-    #                 numpy.mean(j[:, i])
-    #             )
-    #             l.append(
-    #                 numpy.std(j[:, i], ddof=1)
-    #             )
-    #     return l
+    # def new_divergenced_market(self, kl_divergence=(1, 1, 1)):
+    #     def divergenced_kernel(dist:GaussianKernelMixDistribution, kl_divergence_value:float):
+    #         kernel_matrix = dist.kernel_data().reshape(-1)
 
 
 if __name__ == "__main__":
@@ -153,14 +134,14 @@ if __name__ == "__main__":
     trade_aq = aq
 
     ppf = numpy.sort(
-        simulator.market_trade(x, station, br, aq, dp, rp) - simulator.market_trade(trade_aq, station, br,
-                                                                                    aq, dp, rp)
+        simulator.random_sample_trade(x, station, br, aq, dp, rp) - simulator.random_sample_trade(trade_aq, station, br,
+                                                                                                  aq, dp, rp)
     )
-    pyplot.plot(simulator.market_trade(x, station, br, aq, dp, rp))
-    pyplot.plot(simulator.market_trade(trade_aq, station, br, aq, dp, rp))
+    pyplot.plot(simulator.random_sample_trade(x, station, br, aq, dp, rp))
+    pyplot.plot(simulator.random_sample_trade(trade_aq, station, br, aq, dp, rp))
     # pyplot.plot([0] * 1000)
-    print(numpy.mean(simulator.market_trade(x, station, br, aq, dp, rp)))
-    print(numpy.mean(simulator.market_trade(trade_aq, station, br, aq, dp, rp)))
+    print(numpy.mean(simulator.random_sample_trade(x, station, br, aq, dp, rp)))
+    print(numpy.mean(simulator.random_sample_trade(trade_aq, station, br, aq, dp, rp)))
     pyplot.show()
 
     simulator.predict_market.plot()
