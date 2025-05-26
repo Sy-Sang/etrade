@@ -43,11 +43,22 @@ class BasicRecycle(Recycle):
         self.penalty_coefficient = penalty_coefficient
 
     def __call__(self, actually_quantity_table, submitted_quantity, trade_yield_table, *args, **kwargs):
+        # print(trade_yield_table.shape)
+
         actually_quantity_table = numpy.atleast_2d(actually_quantity_table)
         trade_yield_table = numpy.atleast_2d(trade_yield_table)
+        submitted_quantity = numpy.atleast_2d(submitted_quantity)
 
         aq_sum = numpy.sum(actually_quantity_table, axis=0)  # 每列求和
-        sq_sum = numpy.sum(submitted_quantity)
+        # sq_sum = numpy.sum(submitted_quantity)
+
+        # 判断是否为逐时提交数据（和 actually_quantity_table 形状一样）
+        if submitted_quantity.shape == actually_quantity_table.shape:
+            sq_sum = numpy.sum(submitted_quantity, axis=0)  # 每列（每时）总提交
+            # bias_mask = (aq_sum > (1 + self.bias_ratio) * sq_sum) | (aq_sum < self.bias_ratio * sq_sum)
+        else:
+            sq_sum = numpy.sum(submitted_quantity)  # 总提交
+            # bias_mask = (aq_sum > (1 + self.bias_ratio) * sq_sum) | (aq_sum < self.bias_ratio * sq_sum)
 
         bias_mask = (aq_sum > (1 + self.bias_ratio) * sq_sum) | (aq_sum < self.bias_ratio * sq_sum)
         penalty = numpy.sum(trade_yield_table, axis=0) * self.penalty_coefficient
@@ -56,21 +67,39 @@ class BasicRecycle(Recycle):
         return adjusted_yield
 
 
+
 class PointwiseRecycle(BasicRecycle):
     """逐点的回收机制"""
 
+    # def penalty_q(self, aq_table, sq):
+    #     """判断是否惩罚"""
+    #     aq_table = numpy.atleast_2d(aq_table)
+    #     sq = numpy.asarray(sq)
+    #     if sq.shape == aq_table.shape:
+    #         pass
+    #     else:
+    #         sq = numpy.expand_dims(sq, axis=1)
+    #         sq = numpy.broadcast_to(sq, aq_table.shape)
+    #     condition = (aq_table > (1 + self.bias_ratio) * sq) | (aq_table < self.bias_ratio * sq)
+    #     # return numpy.any(condition, axis=0)
+    #     return condition
     def penalty_q(self, aq_table, sq):
         """判断是否惩罚"""
         aq_table = numpy.atleast_2d(aq_table)
-        sq = numpy.asarray(sq)
-        if sq.shape == aq_table.shape:
-            pass
-        else:
-            sq = numpy.expand_dims(sq, axis=1)
-            sq = numpy.broadcast_to(sq, aq_table.shape)
+        sq = numpy.atleast_2d(sq)
+
+        # 如果维度不匹配，进行广播处理
+        if sq.shape != aq_table.shape:
+            try:
+                sq = numpy.broadcast_to(sq, aq_table.shape)
+                # print("submitted_quantity 被广播为:", sq.shape)
+            except ValueError:
+                raise ValueError(
+                    f"无法将 submitted_quantity 形状 {sq.shape} 广播为 actually_quantity_table 形状 {aq_table.shape}")
+
+        # 判断是否超过阈值
         condition = (aq_table > (1 + self.bias_ratio) * sq) | (aq_table < self.bias_ratio * sq)
-        # return numpy.any(condition, axis=0)
-        return condition
+        return condition  # shape: same as aq_table (element-wise mask)
 
     def __call__(self, actually_quantity_table, submitted_quantity, trade_yield_table, *args, **kwargs):
         trade_yield_table = numpy.atleast_2d(trade_yield_table)

@@ -203,9 +203,10 @@ class DistributiveMarket:
                 cls.trade_with_recycle(station, recycle, aq, dp, rp, x)
             ) * -1
 
-        result = differential_evolution(f, [(q_min, q_max)] * len(aq), strategy='best1bin',
-                                        mutation=(0.5, 1), recombination=0.7,
-                                        popsize=15, maxiter=1000, tol=1e-6)
+        # result = differential_evolution(f, [(q_min, q_max)] * len(aq), strategy='best1bin',
+        #                                 mutation=(0.5, 1), recombination=0.7,
+        #                                 popsize=15, maxiter=1000, tol=1e-6)
+        result = differential_evolution(f, [(q_min, q_max)] * len(aq))
         return result
 
     def crps(self, aq, dp, rp):
