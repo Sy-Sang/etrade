@@ -27,7 +27,7 @@ from data_utils.stochastic_utils.vdistributions.parameter.abstract import Parame
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.basic import NormalDistribution, \
     SkewNormalDistribution, LogNormalDistribution
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.kernel.gaussian import \
-    GaussianKernelMixDistribution, GaussianKernelWeightedMixDistribution
+    GaussianKernelMixDistribution, WeightedGaussianKernelMixDistribution
 from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.kernel2 import KernelMixDistribution
 from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.histogram import HistogramDistribution
 from data_utils.stochastic_utils.vdistributions.tools.clip import ClampedDistribution
@@ -155,7 +155,7 @@ def market_hybridization_by_weight(
         arg_a = numpy.column_stack((k_a, w_a))
         arg_b = numpy.column_stack((k_b, w_b))
         args = numpy.concatenate((arg_a, arg_b))
-        return GaussianKernelWeightedMixDistribution(*args)
+        return WeightedGaussianKernelMixDistribution(*args)
 
     def series_hybridization(s_a: DistributiveSeries, s_b: DistributiveSeries, w_r_a, w_r_b):
         d = []

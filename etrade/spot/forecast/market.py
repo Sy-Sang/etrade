@@ -82,6 +82,16 @@ class DistributiveMarket:
             "realtime_price": self.realtime_price.distributions
         })
 
+    def __getitem__(self, item):
+        if item[0] == 0:
+            return self.power_generation.distributions[item[1]]
+        elif item[0] == 1:
+            return self.dayahead_price.distributions[item[1]]
+        elif item[0] == 2:
+            return self.realtime_price.distributions[item[1]]
+        else:
+            raise Exception(f"item mistake: {item}")
+
     def plot(self, curve_index=1, num=100):
         """显示pyplot"""
         counter = 1
@@ -93,10 +103,10 @@ class DistributiveMarket:
                 counter += 1
         pyplot.show()
 
-    def plot2(self, curve_index=1, num=100):
-        counter = 1
-        for i in range(self.power_generation.len):
-            pyplot.subplot(3, 1, counter)
+    # def plot2(self, curve_index=1, num=100):
+    #     counter = 1
+    #     for i in range(self.power_generation.len):
+    #         pyplot.subplot(3, 1, counter)
 
     def rvf(self, num: int, aq_range=(-numpy.inf, numpy.inf), dp_range=(-numpy.inf, numpy.inf),
             rp_range=(-numpy.inf, numpy.inf)):

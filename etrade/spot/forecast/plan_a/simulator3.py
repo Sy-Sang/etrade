@@ -28,7 +28,7 @@ from functools import partial
 from easy_utils.number_utils.number_utils import EasyFloat
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.basic import NormalDistribution
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.kernel.gaussian import \
-    GaussianKernelWeightedMixDistribution
+    WeightedGaussianKernelMixDistribution
 from etrade.spot.forecast.market import DistributiveSeries, DistributiveMarket
 from etrade.spot.forecast.plan_a.constructor import *
 from etrade.spot.forecast.yieldindex import zero_quantile
