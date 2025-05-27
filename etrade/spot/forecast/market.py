@@ -103,10 +103,16 @@ class DistributiveMarket:
                 counter += 1
         pyplot.show()
 
-    # def plot2(self, curve_index=1, num=100):
-    #     counter = 1
-    #     for i in range(self.power_generation.len):
-    #         pyplot.subplot(3, 1, counter)
+    def plot2(self, curve_index=1, num=100):
+        # counter = 1
+        # for i in range(self.power_generation.len):
+        #     pyplot.subplot(3, 1, counter)
+        for row in range(3):
+            for j in range(self.market_len):
+                if row == 0:
+                    pyplot.subplot(1, self.power_generation.len, counter)
+
+
 
     def rvf(self, num: int, aq_range=(-numpy.inf, numpy.inf), dp_range=(-numpy.inf, numpy.inf),
             rp_range=(-numpy.inf, numpy.inf)):
