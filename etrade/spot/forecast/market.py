@@ -104,15 +104,19 @@ class DistributiveMarket:
         pyplot.show()
 
     def plot2(self, curve_index=1, num=100):
-        # counter = 1
-        # for i in range(self.power_generation.len):
-        #     pyplot.subplot(3, 1, counter)
-        for row in range(3):
-            for j in range(self.market_len):
-                if row == 0:
-                    pyplot.subplot(1, self.power_generation.len, counter)
+        for i in range(self.market_len):
+            pyplot.subplot(2, self.market_len, i + 1)
+            curve = self[0, i].curves(num)[curve_index]
+            pyplot.plot(curve[:, 0], curve[:, 1])
 
+        for i in range(self.market_len):
+            pyplot.subplot(2, self.market_len, i + self.market_len + 1)
+            curve_dp = self[1, i].curves(num)[curve_index]
+            curve_rp = self[2, i].curves(num)[curve_index]
+            pyplot.plot(curve_dp[:, 0], curve_dp[:, 1])
+            pyplot.plot(curve_rp[:, 0], curve_rp[:, 1])
 
+        pyplot.show()
 
     def rvf(self, num: int, aq_range=(-numpy.inf, numpy.inf), dp_range=(-numpy.inf, numpy.inf),
             rp_range=(-numpy.inf, numpy.inf)):
@@ -137,7 +141,7 @@ class DistributiveMarket:
         return self.power_generation.mean(num), self.dayahead_price.mean(num), self.realtime_price.mean(num)
 
     def correlated_rvf(self, num: int, pearson, samples=None):
-        """带有相关性的随机样本"""
+        """带有相关性的随机样本, 有错误, 未clip"""
         samples = [
             [None] * self.power_generation.len,
             [None] * self.power_generation.len,
@@ -166,133 +170,133 @@ class DistributiveMarket:
         """考虑回收机制的交易"""
         return recycle(aq, x, cls.trade(station, aq, dp, rp, x))
 
-    def market_trade(self, station: Station, recycle: Recycle, x, num=1000):
-        aq, dp, rp = self.rvf(num)
-        return self.trade_with_recycle(station, recycle, aq, dp, rp, x)
+    # def market_trade(self, station: Station, recycle: Recycle, x, num=1000):
+    #     aq, dp, rp = self.rvf(num)
+    #     return self.trade_with_recycle(station, recycle, aq, dp, rp, x)
 
-    def power_generation_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
-        q_max = station.max_power if q_max is None else q_max
-        power_generation, dayahead_price, realtime_price = self.rvf(num)
+    # def power_generation_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
+    #     q_max = station.max_power if q_max is None else q_max
+    #     power_generation, dayahead_price, realtime_price = self.rvf(num)
+    #
+    #     def f(x):
+    #         return numpy.mean(
+    #             self.trade_with_recycle(station, recycle, power_generation, dayahead_price,
+    #                                     realtime_price, x)
+    #         ) * -1
+    #
+    #     result = differential_evolution(
+    #         f,
+    #         [(q_min, q_max)] * self.power_generation.len,
+    #         strategy='best1bin',  # 变异策略
+    #         # popsize=10,  # 种群大小（默认15，越小越快但精度低）
+    #         # mutation=(0.5, 1.0),  # 变异范围
+    #         # recombination=0.9,  # 交叉概率
+    #         tol=1e-5,
+    #         polish=True,  # 自动调用L-BFGS-B精修
+    #         # workers=-1,  # 多核并行
+    #         # updating='deferred',  # 提升并行效率
+    #     )
+    #     return result
 
-        def f(x):
-            return numpy.mean(
-                self.trade_with_recycle(station, recycle, power_generation, dayahead_price,
-                                        realtime_price, x)
-            ) * -1
+    # def faster_power_generation_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
+    #     q_min = 0 if q_min is None else q_min
+    #     q_max = station.max_power if q_max is None else q_max
+    #     power_generation, dayahead_price, realtime_price = self.rvf(num)
+    #     mean = self.mean(num)
+    #
+    #     def f(x):
+    #         return numpy.mean(
+    #             self.trade_with_recycle(station, recycle, power_generation, dayahead_price,
+    #                                     realtime_price, x)
+    #         ) * -1
+    #
+    #     result = minimize(f, mean[0], bounds=[(q_min, q_max)] * self.power_generation.len)
+    #     return result
 
-        result = differential_evolution(
-            f,
-            [(q_min, q_max)] * self.power_generation.len,
-            strategy='best1bin',  # 变异策略
-            # popsize=10,  # 种群大小（默认15，越小越快但精度低）
-            # mutation=(0.5, 1.0),  # 变异范围
-            # recombination=0.9,  # 交叉概率
-            tol=1e-5,
-            polish=True,  # 自动调用L-BFGS-B精修
-            # workers=-1,  # 多核并行
-            # updating='deferred',  # 提升并行效率
-        )
-        return result
+    # @classmethod
+    # def submitted_quantity_optimizer(cls, station: Station, recycle: Recycle, aq, dp, rp, q_min=0, q_max=None):
+    #     """sq优化器"""
+    #     q_max = station.max_power if q_max is None else q_max
+    #
+    #     def f(x):
+    #         return numpy.mean(
+    #             cls.trade_with_recycle(station, recycle, aq, dp, rp, x)
+    #         ) * -1
+    #
+    #     # result = differential_evolution(f, [(q_min, q_max)] * len(aq), strategy='best1bin',
+    #     #                                 mutation=(0.5, 1), recombination=0.7,
+    #     #                                 popsize=15, maxiter=1000, tol=1e-6)
+    #     result = differential_evolution(f, [(q_min, q_max)] * len(aq))
+    #     return result
 
-    def faster_power_generation_optimizer(self, station: Station, recycle: Recycle, q_min=0, q_max=None, num=1000):
-        q_min = 0 if q_min is None else q_min
-        q_max = station.max_power if q_max is None else q_max
-        power_generation, dayahead_price, realtime_price = self.rvf(num)
-        mean = self.mean(num)
-
-        def f(x):
-            return numpy.mean(
-                self.trade_with_recycle(station, recycle, power_generation, dayahead_price,
-                                        realtime_price, x)
-            ) * -1
-
-        result = minimize(f, mean[0], bounds=[(q_min, q_max)] * self.power_generation.len)
-        return result
-
-    @classmethod
-    def submitted_quantity_optimizer(cls, station: Station, recycle: Recycle, aq, dp, rp, q_min=0, q_max=None):
-        """sq优化器"""
-        q_max = station.max_power if q_max is None else q_max
-
-        def f(x):
-            return numpy.mean(
-                cls.trade_with_recycle(station, recycle, aq, dp, rp, x)
-            ) * -1
-
-        # result = differential_evolution(f, [(q_min, q_max)] * len(aq), strategy='best1bin',
-        #                                 mutation=(0.5, 1), recombination=0.7,
-        #                                 popsize=15, maxiter=1000, tol=1e-6)
-        result = differential_evolution(f, [(q_min, q_max)] * len(aq))
-        return result
-
-    def crps(self, aq, dp, rp):
-        """crps"""
-        aq = numpy.asarray(aq).reshape(-1)
-        dp = numpy.asarray(dp).reshape(-1)
-        rp = numpy.asarray(rp).reshape(-1)
-        l = [[], [], []]
-        for i in range(self.power_generation.len):
-            l[0].append(
-                crps(self.power_generation.distributions[i], aq[i])
-            )
-            l[1].append(
-                crps(self.dayahead_price.distributions[i], dp[i])
-            )
-            l[2].append(
-                crps(self.realtime_price.distributions[i], rp[i])
-            )
-        return numpy.asarray(l)
-
-    def faster_crps(self, aq, dp, rp):
-        def private_crps(dist: AbstractDistribution, value, num_points=100):
-            domain_min, domain_max = dist.domain()
-            x = numpy.linspace(domain_min, domain_max, num_points)
-            fx = (dist.cdf(x) - numpy.where(x >= value, 1, 0)) ** 2
-            return numpy.trapz(fx, x)
-
-        aq = numpy.asarray(aq).reshape(-1)
-        dp = numpy.asarray(dp).reshape(-1)
-        rp = numpy.asarray(rp).reshape(-1)
-        l = [[], [], []]
-        for i in range(self.power_generation.len):
-            l[0].append(
-                private_crps(self.power_generation.distributions[i], aq[i])
-            )
-            l[1].append(
-                private_crps(self.dayahead_price.distributions[i], dp[i])
-            )
-            l[2].append(
-                private_crps(self.realtime_price.distributions[i], rp[i])
-            )
-        return numpy.asarray(l)
-
-    def curve_matrix(self, curve_index=0, curve_len=10, tail_eps=0.1):
-        m = []
-        for i in range(self.market_len):
-            column = [
-                self.power_generation.distributions[i].curves(curve_len, tail_eps)[curve_index][:, 1],
-                self.dayahead_price.distributions[i].curves(curve_len, tail_eps)[curve_index][:, 1],
-                self.realtime_price.distributions[i].curves(curve_len, tail_eps)[curve_index][:, 1],
-            ]
-            m.append(column)
-        return numpy.asarray(m).reshape(-1)
-
-    def faster_log_score(self, aq, dp, rp):
-        aq = numpy.asarray(aq).reshape(-1)
-        dp = numpy.asarray(dp).reshape(-1)
-        rp = numpy.asarray(rp).reshape(-1)
-        l = [[], [], []]
-        for i in range(self.market_len):
-            l[0].append(
-                numpy.log(self.power_generation.distributions[i].pdf(aq[i]))
-            )
-            l[1].append(
-                numpy.log(self.dayahead_price.distributions[i].pdf(dp[i]))
-            )
-            l[2].append(
-                numpy.log(self.realtime_price.distributions[i].pdf(rp[i]))
-            )
-        return numpy.asarray(l)
+    # def crps(self, aq, dp, rp):
+    #     """crps"""
+    #     aq = numpy.asarray(aq).reshape(-1)
+    #     dp = numpy.asarray(dp).reshape(-1)
+    #     rp = numpy.asarray(rp).reshape(-1)
+    #     l = [[], [], []]
+    #     for i in range(self.power_generation.len):
+    #         l[0].append(
+    #             crps(self.power_generation.distributions[i], aq[i])
+    #         )
+    #         l[1].append(
+    #             crps(self.dayahead_price.distributions[i], dp[i])
+    #         )
+    #         l[2].append(
+    #             crps(self.realtime_price.distributions[i], rp[i])
+    #         )
+    #     return numpy.asarray(l)
+    #
+    # def faster_crps(self, aq, dp, rp):
+    #     def private_crps(dist: AbstractDistribution, value, num_points=100):
+    #         domain_min, domain_max = dist.domain()
+    #         x = numpy.linspace(domain_min, domain_max, num_points)
+    #         fx = (dist.cdf(x) - numpy.where(x >= value, 1, 0)) ** 2
+    #         return numpy.trapz(fx, x)
+    #
+    #     aq = numpy.asarray(aq).reshape(-1)
+    #     dp = numpy.asarray(dp).reshape(-1)
+    #     rp = numpy.asarray(rp).reshape(-1)
+    #     l = [[], [], []]
+    #     for i in range(self.power_generation.len):
+    #         l[0].append(
+    #             private_crps(self.power_generation.distributions[i], aq[i])
+    #         )
+    #         l[1].append(
+    #             private_crps(self.dayahead_price.distributions[i], dp[i])
+    #         )
+    #         l[2].append(
+    #             private_crps(self.realtime_price.distributions[i], rp[i])
+    #         )
+    #     return numpy.asarray(l)
+    #
+    # def curve_matrix(self, curve_index=0, curve_len=10, tail_eps=0.1):
+    #     m = []
+    #     for i in range(self.market_len):
+    #         column = [
+    #             self.power_generation.distributions[i].curves(curve_len, tail_eps)[curve_index][:, 1],
+    #             self.dayahead_price.distributions[i].curves(curve_len, tail_eps)[curve_index][:, 1],
+    #             self.realtime_price.distributions[i].curves(curve_len, tail_eps)[curve_index][:, 1],
+    #         ]
+    #         m.append(column)
+    #     return numpy.asarray(m).reshape(-1)
+    #
+    # def faster_log_score(self, aq, dp, rp):
+    #     aq = numpy.asarray(aq).reshape(-1)
+    #     dp = numpy.asarray(dp).reshape(-1)
+    #     rp = numpy.asarray(rp).reshape(-1)
+    #     l = [[], [], []]
+    #     for i in range(self.market_len):
+    #         l[0].append(
+    #             numpy.log(self.power_generation.distributions[i].pdf(aq[i]))
+    #         )
+    #         l[1].append(
+    #             numpy.log(self.dayahead_price.distributions[i].pdf(dp[i]))
+    #         )
+    #         l[2].append(
+    #             numpy.log(self.realtime_price.distributions[i].pdf(rp[i]))
+    #         )
+    #     return numpy.asarray(l)
 
     # def price_kl_divergence(self):
     #     """价格的kl散度"""

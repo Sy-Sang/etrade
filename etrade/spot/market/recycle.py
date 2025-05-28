@@ -43,29 +43,23 @@ class BasicRecycle(Recycle):
         self.penalty_coefficient = penalty_coefficient
 
     def __call__(self, actually_quantity_table, submitted_quantity, trade_yield_table, *args, **kwargs):
-        # print(trade_yield_table.shape)
 
         actually_quantity_table = numpy.atleast_2d(actually_quantity_table)
-        trade_yield_table = numpy.atleast_2d(trade_yield_table)
+        trade_yield_table = numpy.atleast_1d(trade_yield_table)
         submitted_quantity = numpy.atleast_2d(submitted_quantity)
 
-        aq_sum = numpy.sum(actually_quantity_table, axis=0)  # 每列求和
-        # sq_sum = numpy.sum(submitted_quantity)
-
-        # 判断是否为逐时提交数据（和 actually_quantity_table 形状一样）
+        aq_sum = numpy.sum(actually_quantity_table, axis=0)
+        
         if submitted_quantity.shape == actually_quantity_table.shape:
-            sq_sum = numpy.sum(submitted_quantity, axis=0)  # 每列（每时）总提交
-            # bias_mask = (aq_sum > (1 + self.bias_ratio) * sq_sum) | (aq_sum < self.bias_ratio * sq_sum)
+            sq_sum = numpy.sum(submitted_quantity, axis=0)
         else:
             sq_sum = numpy.sum(submitted_quantity)  # 总提交
-            # bias_mask = (aq_sum > (1 + self.bias_ratio) * sq_sum) | (aq_sum < self.bias_ratio * sq_sum)
 
-        bias_mask = (aq_sum > (1 + self.bias_ratio) * sq_sum) | (aq_sum < self.bias_ratio * sq_sum)
-        penalty = numpy.sum(trade_yield_table, axis=0) * self.penalty_coefficient
+        bias_mask = ((aq_sum / sq_sum) < self.bias_ratio) | ((aq_sum / sq_sum) > (2 - self.bias_ratio))
+        penalty = trade_yield_table * self.penalty_coefficient
+        adjusted_yield = trade_yield_table - penalty * bias_mask.astype(float)
 
-        adjusted_yield = numpy.sum(trade_yield_table, axis=0) - penalty * bias_mask.astype(float)
-        return adjusted_yield
-
+        return adjusted_yield.reshape(-1)
 
 
 class PointwiseRecycle(BasicRecycle):

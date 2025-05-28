@@ -39,6 +39,7 @@ from etrade.spot.market.recycle import BasicRecycle, PointwiseRecycle
 
 # 外部模块
 import numpy
+from scipy.optimize import differential_evolution, minimize
 
 
 # 代码块
@@ -83,20 +84,27 @@ class PredictBasedMarketSimulator:
         return power_generation, dayahead_price, realtime_price
 
     def predicted_optimize(self, station: Station, recycle: BasicRecycle, power_generation, dayahead_price,
-                           realtime_price):
-        return DistributiveMarket.submitted_quantity_optimizer(
-            station, recycle, power_generation, dayahead_price, realtime_price
+                           realtime_price, target_quantile: float = None):
+        def target_function(x):
+            yield_result = self.random_sample_trade(x, station, recycle, power_generation, dayahead_price,
+                                                    realtime_price)
+            if target_quantile is None:
+                return numpy.mean(yield_result) * -1
+            else:
+                return numpy.quantile(yield_result, target_quantile) * -1
+
+        return differential_evolution(
+            target_function,
+            # numpy.mean(power_generation, axis=1),
+            bounds=[(0, station.max_power)] * len(power_generation)
         ).x
 
     def random_sample_trade(
             self, x, station: Station, recycle: BasicRecycle, power_generation, dayahead_price, realtime_price
     ):
         sq = numpy.asarray(x)
-        return recycle(
-            power_generation,
-            sq,
-            DistributiveMarket.trade(station, power_generation, dayahead_price, realtime_price, sq)
-        )
+        return DistributiveMarket.trade_with_recycle(station, recycle, power_generation, dayahead_price, realtime_price,
+                                                     sq)
 
     def new_divergenced_market(self, js_divergence=(0.1, 0.1, 0.1), kernel_num=(None, None, None)):
         dist_list = [[], [], []]
@@ -123,9 +131,9 @@ if __name__ == "__main__":
 
     market_len = 4
     init_kwargs = {
-        "aq_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 50), (1, 10), (1, 4)),
-        "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 20), (1, 10), (1, 4)),
-        "rp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 20), (1, 10), (1, 4)),
+        "aq_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 50), (0.5, 1), (1, 2)),
+        "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (1, 20), (1, 4)),
+        "rp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 20), (1, 20), (1, 4)),
         "aq_range": (0, 50),
         "dp_range": (0, 1e+6),
         "rp_range": (0, 1e+6),
@@ -135,29 +143,34 @@ if __name__ == "__main__":
     }
 
     station = Station("station", 50)
-    br = BasicRecycle(0.5, 1.05)
+    br = BasicRecycle(0.95, 1.05)
     simulator = PredictBasedMarketSimulator(**init_kwargs)
 
     aq, dp, rp = simulator.predicted_random(1000)
 
-    print(numpy.mean(aq, axis=1).tolist())
-    x = simulator.predicted_optimize(station, br, aq, dp, rp)
+    print(aq.shape)
+    print(numpy.mean(aq, axis=1))
+
+    # print(numpy.mean(aq, axis=1).tolist())
+    x = simulator.predicted_optimize(station, br, aq, dp, rp, 0.4)
     print(x.tolist())
     aq, dp, rp = simulator.predicted_random(1000)
     # trade_aq = numpy.mean(aq, axis=1)
     trade_aq = aq
-
-    ppf = numpy.sort(
-        simulator.random_sample_trade(x, station, br, aq, dp, rp) - simulator.random_sample_trade(trade_aq, station, br,
-                                                                                                  aq, dp, rp)
-    )
+    #
+    # ppf = numpy.sort(
+    #     simulator.random_sample_trade(x, station, br, aq, dp, rp) - simulator.random_sample_trade(trade_aq, station, br,
+    #                                                                                               aq, dp, rp)
+    # )
+    # print(simulator.random_sample_trade(x, station, br, aq, dp, rp).shape)
+    #
     pyplot.plot(simulator.random_sample_trade(x, station, br, aq, dp, rp))
     pyplot.plot(simulator.random_sample_trade(trade_aq, station, br, aq, dp, rp))
-    # pyplot.plot([0] * 1000)
+    # # pyplot.plot([0] * 1000)
     print(numpy.mean(simulator.random_sample_trade(x, station, br, aq, dp, rp)))
     print(numpy.mean(simulator.random_sample_trade(trade_aq, station, br, aq, dp, rp)))
     pyplot.show()
-
-    simulator.predict_market.plot()
+    #
+    simulator.predict_market.plot2(1, 1000)
 
     print(TimeStamp.now() - t0)
