@@ -49,7 +49,7 @@ class BasicRecycle(Recycle):
         submitted_quantity = numpy.atleast_2d(submitted_quantity)
 
         aq_sum = numpy.sum(actually_quantity_table, axis=0)
-        
+
         if submitted_quantity.shape == actually_quantity_table.shape:
             sq_sum = numpy.sum(submitted_quantity, axis=0)
         else:

@@ -26,8 +26,11 @@ from data_utils.stochastic_utils.vdistributions.abstract import AbstractDistribu
 from data_utils.stochastic_utils.vdistributions.parameter.abstract import ParameterDistribution
 from data_utils.stochastic_utils.vdistributions.parameter.continuous.basic import NormalDistribution, \
     SkewNormalDistribution, LogNormalDistribution
-from data_utils.stochastic_utils.vdistributions.parameter.continuous.kernel.gaussian import \
-    GaussianKernelMixDistribution, WeightedGaussianKernelMixDistribution
+# from data_utils.stochastic_utils.vdistributions.parameter.continuous.kernel.gaussian import \
+#     GaussianKernelMixDistribution, WeightedGaussianKernelMixDistribution
+from data_utils.stochastic_utils.vdistributions.parameter.continuous.kernel.gaussian2 import \
+    WeightedGaussianKernelMixDistribution
+
 from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.kernel2 import KernelMixDistribution
 from data_utils.stochastic_utils.vdistributions.nonparametric.continuous.histogram import HistogramDistribution
 from data_utils.stochastic_utils.vdistributions.tools.clip import ClampedDistribution
@@ -86,7 +89,7 @@ class OrdinaryGaussianKernelDistributionConstructor(AbstractDistributionConstruc
                     numpy.random.uniform(*self.std_range)
                 ])
             dist_list.append(
-                GaussianKernelMixDistribution(*kernel_arg)
+                WeightedGaussianKernelMixDistribution(*kernel_arg)
             )
         return dist_list
 
@@ -147,7 +150,7 @@ def market_hybridization_by_weight(
         num_a: numpy.ndarray,
         num_b: numpy.ndarray
 ):
-    def weight_hybridization(d_a: GaussianKernelMixDistribution, d_b: GaussianKernelMixDistribution, w_r_a, w_r_b):
+    def weight_hybridization(d_a: WeightedGaussianKernelMixDistribution, d_b: WeightedGaussianKernelMixDistribution, w_r_a, w_r_b):
         k_a = d_a.kernel_data(None)
         w_a = numpy.full(k_a.shape[0], w_r_a)
         k_b = d_b.kernel_data(None)

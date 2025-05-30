@@ -82,7 +82,7 @@ class DistributiveMarket:
             "realtime_price": self.realtime_price.distributions
         })
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> AbstractDistribution:
         if item[0] == 0:
             return self.power_generation.distributions[item[1]]
         elif item[0] == 1:

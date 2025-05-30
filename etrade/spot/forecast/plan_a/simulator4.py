@@ -83,8 +83,8 @@ class PredictBasedMarketSimulator:
         )
         return power_generation, dayahead_price, realtime_price
 
-    def predicted_optimize(self, station: Station, recycle: BasicRecycle, power_generation, dayahead_price,
-                           realtime_price, target_quantile: float = None):
+    def random_sample_optimize(self, station: Station, recycle: BasicRecycle, power_generation, dayahead_price,
+                               realtime_price, target_quantile: float = None):
         def target_function(x):
             yield_result = self.random_sample_trade(x, station, recycle, power_generation, dayahead_price,
                                                     realtime_price)
@@ -106,22 +106,35 @@ class PredictBasedMarketSimulator:
         return DistributiveMarket.trade_with_recycle(station, recycle, power_generation, dayahead_price, realtime_price,
                                                      sq)
 
-    def new_divergenced_market(self, js_divergence=(0.1, 0.1, 0.1), kernel_num=(None, None, None)):
-        dist_list = [[], [], []]
-        for i in range(3):
-            for j in range(self.market_len):
-                dist_list[i].append(
-                    divergenced_weight_kernel_mix_distribution(
-                        self.predict_market[i, j],
-                        js_divergence[0],
-                        kernel_num[0]
-                    )
-                )
-        return DistributiveMarket(
-            DistributiveSeries(*dist_list[0]),
-            DistributiveSeries(*dist_list[1]),
-            DistributiveSeries(*dist_list[2]),
-        )
+    # def new_divergenced_market(self, js_divergence=(0.1, 0.1, 0.1), kernel_num=(None, None, None)):
+    #     dist_list = [[], [], []]
+    #     for i in range(3):
+    #         for j in range(self.market_len):
+    #             dist_list[i].append(
+    #                 divergenced_weight_kernel_mix_distribution(
+    #                     self.predict_market[i, j],
+    #                     js_divergence[0],
+    #                     kernel_num[0]
+    #                 )
+    #             )
+    #     return DistributiveMarket(
+    #         DistributiveSeries(*dist_list[0]),
+    #         DistributiveSeries(*dist_list[1]),
+    #         DistributiveSeries(*dist_list[2]),
+    #     )
+    #
+    # def new_noise_kerenl_market(self, noise_kernels: numpy.ndarray):
+    #     dist_list = [[], [], []]
+    #     for i in range(3):
+    #         for j in range(self.market_len):
+    #             # kernel_data = self.predict_market[i, j].kernel_data()
+    #             # weight_data = self.predict_market[i, j].weights
+    #             dist_list.append(self.predict_market[i, j].add_kernel(noise_kernels[i * j]))
+    #     return DistributiveMarket(
+    #         DistributiveSeries(*dist_list[0]),
+    #         DistributiveSeries(*dist_list[1]),
+    #         DistributiveSeries(*dist_list[2]),
+    #     )
 
 
 if __name__ == "__main__":
@@ -132,8 +145,8 @@ if __name__ == "__main__":
     market_len = 4
     init_kwargs = {
         "aq_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 50), (0.5, 1), (1, 2)),
-        "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (1, 20), (1, 4)),
-        "rp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 20), (1, 20), (1, 4)),
+        "dp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 10), (0.5, 1), (1, 4)),
+        "rp_constructor": OrdinaryGaussianKernelDistributionConstructor((0, 20), (0.5, 2), (1, 4)),
         "aq_range": (0, 50),
         "dp_range": (0, 1e+6),
         "rp_range": (0, 1e+6),
@@ -143,7 +156,7 @@ if __name__ == "__main__":
     }
 
     station = Station("station", 50)
-    br = BasicRecycle(0.95, 1.05)
+    br = BasicRecycle(0.5, 1.05)
     simulator = PredictBasedMarketSimulator(**init_kwargs)
 
     aq, dp, rp = simulator.predicted_random(1000)
@@ -152,7 +165,7 @@ if __name__ == "__main__":
     print(numpy.mean(aq, axis=1))
 
     # print(numpy.mean(aq, axis=1).tolist())
-    x = simulator.predicted_optimize(station, br, aq, dp, rp, 0.4)
+    x = simulator.random_sample_optimize(station, br, aq, dp, rp, 0.4)
     print(x.tolist())
     aq, dp, rp = simulator.predicted_random(1000)
     # trade_aq = numpy.mean(aq, axis=1)
