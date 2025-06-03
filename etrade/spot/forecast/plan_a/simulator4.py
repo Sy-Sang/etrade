@@ -106,35 +106,35 @@ class PredictBasedMarketSimulator:
         return DistributiveMarket.trade_with_recycle(station, recycle, power_generation, dayahead_price, realtime_price,
                                                      sq)
 
-    # def new_divergenced_market(self, js_divergence=(0.1, 0.1, 0.1), kernel_num=(None, None, None)):
-    #     dist_list = [[], [], []]
-    #     for i in range(3):
-    #         for j in range(self.market_len):
-    #             dist_list[i].append(
-    #                 divergenced_weight_kernel_mix_distribution(
-    #                     self.predict_market[i, j],
-    #                     js_divergence[0],
-    #                     kernel_num[0]
-    #                 )
-    #             )
-    #     return DistributiveMarket(
-    #         DistributiveSeries(*dist_list[0]),
-    #         DistributiveSeries(*dist_list[1]),
-    #         DistributiveSeries(*dist_list[2]),
-    #     )
-    #
-    # def new_noise_kerenl_market(self, noise_kernels: numpy.ndarray):
-    #     dist_list = [[], [], []]
-    #     for i in range(3):
-    #         for j in range(self.market_len):
-    #             # kernel_data = self.predict_market[i, j].kernel_data()
-    #             # weight_data = self.predict_market[i, j].weights
-    #             dist_list.append(self.predict_market[i, j].add_kernel(noise_kernels[i * j]))
-    #     return DistributiveMarket(
-    #         DistributiveSeries(*dist_list[0]),
-    #         DistributiveSeries(*dist_list[1]),
-    #         DistributiveSeries(*dist_list[2]),
-    #     )
+    def new_divergenced_market(self, js_divergence=(0.1, 0.1, 0.1), kernel_num=(None, None, None)):
+        dist_list = [[], [], []]
+        for i in range(3):
+            for j in range(self.market_len):
+                dist_list[i].append(
+                    divergenced_weight_kernel_mix_distribution(
+                        self.predict_market[i, j],
+                        js_divergence[0],
+                        kernel_num[0]
+                    )
+                )
+        return DistributiveMarket(
+            DistributiveSeries(*dist_list[0]),
+            DistributiveSeries(*dist_list[1]),
+            DistributiveSeries(*dist_list[2]),
+        )
+
+    def new_noise_kerenl_market(self, noise_kernels: numpy.ndarray):
+        dist_list = [[], [], []]
+        for i in range(3):
+            for j in range(self.market_len):
+                # kernel_data = self.predict_market[i, j].kernel_data()
+                # weight_data = self.predict_market[i, j].weights
+                dist_list.append(self.predict_market[i, j].add_kernel(noise_kernels[i * j]))
+        return DistributiveMarket(
+            DistributiveSeries(*dist_list[0]),
+            DistributiveSeries(*dist_list[1]),
+            DistributiveSeries(*dist_list[2]),
+        )
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ __copyright__ = ""
 import copy
 import pickle
 import json
-from typing import Union, Self, Type, Iterable
+from typing import Union, Self, Type
 from collections import namedtuple
 from abc import ABC, abstractmethod
 
@@ -150,7 +150,8 @@ def market_hybridization_by_weight(
         num_a: numpy.ndarray,
         num_b: numpy.ndarray
 ):
-    def weight_hybridization(d_a: WeightedGaussianKernelMixDistribution, d_b: WeightedGaussianKernelMixDistribution, w_r_a, w_r_b):
+    def weight_hybridization(d_a: WeightedGaussianKernelMixDistribution, d_b: WeightedGaussianKernelMixDistribution,
+                             w_r_a, w_r_b):
         k_a = d_a.kernel_data(None)
         w_a = numpy.full(k_a.shape[0], w_r_a)
         k_b = d_b.kernel_data(None)
